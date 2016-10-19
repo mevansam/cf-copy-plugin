@@ -1,0 +1,175 @@
+package command_test
+
+import (
+	. "code.cloudfoundry.org/cli/testhelpers/io"
+	. "github.com/cloudfoundry/cli/plugin/pluginfakes"
+	. "github.com/mevansam/cf-copy-plugin/command"
+	. "github.com/mevansam/cf-copy-plugin/command/mocks"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("Copy Plugin Tests", func() {
+	var (
+		fakeCliConnection *FakeCliConnection
+		copyPlugin        *CopyPlugin
+	)
+
+	BeforeEach(func() {
+		fakeCliConnection = &FakeCliConnection{}
+		copyPlugin = &CopyPlugin{}
+	})
+
+	Describe("GetMetadata", func() {
+
+		It("Returns metadata", func() {
+			md := copyPlugin.GetMetadata()
+			Expect(md).NotTo(BeNil())
+		})
+
+		It("Has a help message", func() {
+			md := copyPlugin.GetMetadata()
+			Expect(md.Commands[0].HelpText).NotTo(BeNil())
+		})
+	})
+
+	Describe("Run Copy Command", func() {
+
+		It("Should parse all args", func() {
+
+			copyPluginFake := NewCopyPlugin(NewMockCopyCommand(func(o *CopyOptions) {
+				Expect(o.DestSpace).To(Equal("fake_space"))
+				Expect(o.DestOrg).To(Equal("fake_org"))
+				Expect(o.DestTarget).To(Equal("fake_target"))
+				Expect(o.SourceAppName).To(Equal("fake_app"))
+				Expect(o.CopyAsUpsServices[0]).To(Equal("fake_svc1"))
+				Expect(o.CopyAsUpsServices[1]).To(Equal("fake_svc2"))
+				Expect(o.ServicesOnly).To(BeTrue())
+			}))
+
+			output := CaptureOutput(func() {
+				copyPluginFake.Run(fakeCliConnection, []string{
+					"copy",
+					"fake_space",
+					"fake_org",
+					"fake_target",
+					"--app", "fake_app",
+					"--ups", "fake_svc1,fake_svc2",
+					"--services-only",
+				})
+			})
+
+			Expect(output[0]).To(Equal("Done"))
+		})
+
+		It("Should parse all args", func() {
+
+			copyPluginFake := NewCopyPlugin(NewMockCopyCommand(func(o *CopyOptions) {
+				Expect(o.DestSpace).To(Equal("fake_space"))
+				Expect(o.DestOrg).To(Equal("fake_org"))
+				Expect(o.DestTarget).To(Equal("fake_target"))
+				Expect(o.SourceAppName).To(Equal("fake_app"))
+				Expect(o.CopyAsUpsServices[0]).To(Equal("fake_svc1"))
+				Expect(o.CopyAsUpsServices[1]).To(Equal("fake_svc2"))
+				Expect(o.ServicesOnly).To(BeTrue())
+			}))
+
+			output := CaptureOutput(func() {
+				copyPluginFake.Run(fakeCliConnection, []string{
+					"copy",
+					"fake_space",
+					"fake_org",
+					"fake_target",
+					"--app", "fake_app",
+					"--ups", "fake_svc1,fake_svc2",
+					"--services-only",
+				})
+			})
+
+			Expect(output[0]).To(Equal("Done"))
+		})
+
+		It("Should accept minimal args", func() {
+
+			copyPluginFake := NewCopyPlugin(NewMockCopyCommand(func(o *CopyOptions) {
+				Expect(o.DestSpace).To(Equal("fake_space"))
+				Expect(o.DestOrg).To(Equal(""))
+				Expect(o.DestTarget).To(Equal(""))
+				Expect(o.SourceAppName).To(Equal(""))
+				Expect(o.CopyAsUpsServices).To(BeEmpty())
+				Expect(o.ServicesOnly).To(BeFalse())
+			}))
+
+			output := CaptureOutput(func() {
+				copyPluginFake.Run(fakeCliConnection, []string{
+					"copy",
+					"fake_space",
+				})
+			})
+
+			Expect(output[0]).To(Equal("Done"))
+		})
+
+		It("Should accept fewer but valid args", func() {
+
+			copyPluginFake := NewCopyPlugin(NewMockCopyCommand(func(o *CopyOptions) {
+				Expect(o.DestSpace).To(Equal("fake_space"))
+				Expect(o.DestOrg).To(Equal("fake_org"))
+				Expect(o.DestTarget).To(Equal(""))
+				Expect(o.SourceAppName).To(Equal("fake_app"))
+				Expect(o.CopyAsUpsServices).To(BeEmpty())
+				Expect(o.ServicesOnly).To(BeFalse())
+			}))
+
+			output := CaptureOutput(func() {
+				copyPluginFake.Run(fakeCliConnection, []string{
+					"copy",
+					"fake_space",
+					"fake_org",
+					"--app", "fake_app",
+				})
+			})
+
+			Expect(output[0]).To(Equal("Done"))
+		})
+
+		It("Should recognize missing space", func() {
+
+			copyPluginFake := NewCopyPlugin(NewMockCopyCommand(func(o *CopyOptions) {
+				Fail("CLI argument parsing should have failed and been handled.")
+			}))
+
+			output := CaptureOutput(func() {
+				copyPluginFake.Run(fakeCliConnection, []string{
+					"copy",
+					"--app", "fake_app",
+					"--ups", "fake_svc1,fake_svc2",
+					"--services-only",
+				})
+			})
+
+			Expect(output[0]).To(Equal("FAILED"))
+			Expect(output[1]).To(Equal("At least a destination space must be provided."))
+		})
+
+		It("Should not accept extra positional arg", func() {
+
+			copyPluginFake := NewCopyPlugin(NewMockCopyCommand(func(o *CopyOptions) {
+				Fail("CLI argument parsing should have failed and been handled.")
+			}))
+
+			output := CaptureOutput(func() {
+				copyPluginFake.Run(fakeCliConnection, []string{
+					"copy",
+					"fake_space",
+					"fake_org",
+					"fake_target",
+					"invalid_argument",
+				})
+			})
+
+			Expect(output[0]).To(Equal("FAILED"))
+			Expect(output[1]).To(Equal("Invalid positional argument 'invalid_argument'."))
+		})
+	})
+})

@@ -1,0 +1,21 @@
+- name: Copy Application
+  description: Copies an application to another Space or Cloud Foundry target
+  version: _TAG_
+  created: 2016-01-11T00:00:00Z
+  updated: 2016-01-11T00:00:00Z
+  company:
+  authors:
+  - name: Mevan Samaratunga
+    homepage: http://github.com/mevansam/
+    contact: mevansam@gmail.com
+  homepage: http://github.com/mevansam/cf-copy-plugin
+  binaries:
+  - platform: osx
+    url: http://github.com/mevansam/cf-copy-plugin/raw/_TAG_/bin/osx/copy_plugin
+    checksum: osx-sha1
+  - platform: win64
+    url: http://github.com/mevansam/cf-copy-plugin/raw/_TAG_/bin/win64/copy_plugin.exe
+    checksum: win64-sha1
+  - platform: linux64
+    url: http://github.com/mevansam/cf-copy-plugin/raw/_TAG_/bin/linux64/copy_plugin
+    checksum: linux64-sha1
