@@ -2,7 +2,11 @@ package helpers
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
 	"os"
+	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/cli/cf/api"
@@ -14,8 +18,6 @@ import (
 	"code.cloudfoundry.org/cli/cf/i18n"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/net"
-	"code.cloudfoundry.org/cli/cf/terminal"
-	"code.cloudfoundry.org/cli/cf/trace"
 )
 
 // CfCliSessionProvider -
@@ -23,6 +25,8 @@ type CfCliSessionProvider struct{}
 
 // CfCliSession -
 type CfCliSession struct {
+	logger *Logger
+
 	config     coreconfig.Repository
 	ccGateway  net.Gateway
 	uaaGateway net.Gateway
@@ -36,13 +40,13 @@ func NewCfCliSessionProvider() CloudCountrollerSessionProvider {
 }
 
 // NewCloudControllerSessionFromFilepath -
-func (p *CfCliSessionProvider) NewCloudControllerSessionFromFilepath(configPath string, ui terminal.UI, logger trace.Printer) CloudControllerSession {
+func (p *CfCliSessionProvider) NewCloudControllerSessionFromFilepath(configPath string, logger *Logger) CloudControllerSession {
 
-	session := &CfCliSession{}
+	session := &CfCliSession{logger: logger}
 
 	session.config = coreconfig.NewRepositoryFromFilepath(configPath, func(err error) {
 		if err != nil {
-			ui.Failed(err.Error())
+			logger.UI.Failed(err.Error())
 			os.Exit(1)
 		}
 	})
@@ -52,9 +56,9 @@ func (p *CfCliSessionProvider) NewCloudControllerSessionFromFilepath(configPath 
 	}
 
 	envDialTimeout := os.Getenv("CF_DIAL_TIMEOUT")
-	session.ccGateway = net.NewCloudControllerGateway(session.config, time.Now, ui, logger, envDialTimeout)
-	session.uaaGateway = net.NewUAAGateway(session.config, ui, logger, envDialTimeout)
-	session.uaa = authentication.NewUAARepository(session.uaaGateway, session.config, net.NewRequestDumper(logger))
+	session.ccGateway = net.NewCloudControllerGateway(session.config, time.Now, logger.UI, logger.TracePrinter, envDialTimeout)
+	session.uaaGateway = net.NewUAAGateway(session.config, logger.UI, logger.TracePrinter, envDialTimeout)
+	session.uaa = authentication.NewUAARepository(session.uaaGateway, session.config, net.NewRequestDumper(logger.TracePrinter))
 
 	session.ccGateway.SetTokenRefresher(session.uaa)
 	session.uaaGateway.SetTokenRefresher(session.uaa)
@@ -107,14 +111,19 @@ func (s *CfCliSession) Spaces() spaces.SpaceRepository {
 	return spaces.NewCloudControllerSpaceRepository(s.config, s.ccGateway)
 }
 
-// ServiceSummary -
-func (s *CfCliSession) ServiceSummary() api.ServiceSummaryRepository {
-	return api.NewCloudControllerServiceSummaryRepository(s.config, s.ccGateway)
-}
-
 // Services -
 func (s *CfCliSession) Services() api.ServiceRepository {
 	return api.NewCloudControllerServiceRepository(s.config, s.ccGateway)
+}
+
+// ServicePlans -
+func (s *CfCliSession) ServicePlans() api.ServicePlanRepository {
+	return api.NewCloudControllerServicePlanRepository(s.config, s.ccGateway)
+}
+
+// ServiceSummary -
+func (s *CfCliSession) ServiceSummary() api.ServiceSummaryRepository {
+	return api.NewCloudControllerServiceSummaryRepository(s.config, s.ccGateway)
 }
 
 // UserProvidedServices -
@@ -135,6 +144,55 @@ func (s *CfCliSession) AppSummary() api.AppSummaryRepository {
 // Applications -
 func (s *CfCliSession) Applications() applications.Repository {
 	return applications.NewCloudControllerRepository(s.config, s.ccGateway)
+}
+
+// UploadDroplet -
+func (s *CfCliSession) UploadDroplet(params models.AppParams, dropletPath string) (app models.Application, err error) {
+	app, err = s.Applications().Create(params)
+	if err != nil {
+		return
+	}
+
+	dropletUploadRequest, err := ioutil.TempFile("", ".droplet")
+	if err != nil {
+		return
+	}
+	file, err := os.Open(dropletPath)
+	if err != nil {
+		return
+	}
+	defer func() {
+		file.Close()
+		dropletUploadRequest.Close()
+		os.Remove(dropletUploadRequest.Name())
+	}()
+
+	writer := multipart.NewWriter(dropletUploadRequest)
+	part, err := writer.CreateFormFile("droplet", filepath.Base(dropletPath))
+	if err != nil {
+		return
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return
+	}
+	err = writer.Close()
+	if err != nil {
+		return
+	}
+
+	url := fmt.Sprintf("%s/v2/apps/%s/droplet/upload", s.config.APIEndpoint(), app.ApplicationFields.GUID)
+	request, err := s.ccGateway.NewRequestForFile("PUT", url, s.config.AccessToken(), dropletUploadRequest)
+	if err != nil {
+		return
+	}
+	request.HTTPReq.Header.Set("Content-Type", writer.FormDataContentType())
+
+	response := make(map[string]interface{})
+	_, err = s.ccGateway.PerformRequestForJSONResponse(request, &response)
+	s.logger.DebugMessage("Response from droplet upload: #% v", response)
+
+	return
 }
 
 // ServiceBindings -

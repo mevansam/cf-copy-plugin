@@ -90,6 +90,8 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			serviceInstance        models.ServiceInstance
 			serviceInstancesToCopy []models.ServiceInstance
 
+			destServiceInstanceMap map[string]models.ServiceInstance
+
 			destUserProvidedServices []models.UserProvidedService
 		)
 
@@ -124,7 +126,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			defer c.srcCCSession.SetSessionOrg(c.srcOrg)
 			defer c.srcCCSession.SetSessionSpace(c.srcSpace)
 		}
-		// defer os.RemoveAll(c.dropletDownloadPath)
+		defer os.RemoveAll(c.dropletDownloadPath)
 
 		// Retrieve applications to copied
 
@@ -250,6 +252,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			c.logger.UI.Failed(err.Error())
 			return
 		}
+		destServiceInstanceMap = make(map[string]models.ServiceInstance)
 		for _, s := range serviceInstancesToCopy {
 
 			rebindAppGUIDS := []string{}
@@ -290,7 +293,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			}
 			if ups, contains := helpers.ContainsUserProvidedService(s.ServiceInstanceFields.Name, destUserProvidedServices); contains {
 
-				c.logger.UI.Say("  + %s as a user provided service instance at destination",
+				c.logger.UI.Say("+ %s as a user provided service instance at destination",
 					terminal.EntityNameColor(s.ServiceInstanceFields.Name))
 
 				err = c.destCCSession.UserProvidedServices().Create(ups.Name, "", "", ups.Credentials)
@@ -301,11 +304,43 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 				c.logger.DebugMessage("Created user provided service %s at destination.", s.ServiceInstanceFields.Name)
 
 			} else {
-				c.logger.UI.Say("  + %s as a managed service instance at destination",
+				c.logger.UI.Say("+ %s as a managed service instance at destination",
 					terminal.EntityNameColor(s.ServiceInstanceFields.Name))
 
+				c.logger.DebugMessage("Debug looking up the GUID for service '%s' plan name '%s'",
+					s.ServiceOffering.Label, s.ServicePlan.Name)
+
+				offerings, err := c.destCCSession.Services().FindServiceOfferingsForSpaceByLabel(
+					c.destCCSession.GetSessionSpace().GUID, s.ServiceOffering.Label)
+				if err != nil {
+					c.logger.UI.Failed(err.Error())
+					return
+				}
+
+				servicePlanGUID := ""
+				for _, o := range offerings {
+					plans, err := c.destCCSession.ServicePlans().Search(map[string]string{"service_guid": o.GUID})
+					if err != nil {
+						c.logger.UI.Failed(err.Error())
+						return
+					}
+					for _, p := range plans {
+						if p.Name == s.ServicePlan.Name {
+							servicePlanGUID = p.GUID
+						}
+					}
+				}
+				if servicePlanGUID == "" {
+					c.logger.UI.Failed("Unable to determine the GUID for service '%s' plan name '%s'",
+						s.ServiceOffering.Label, s.ServiceInstanceFields.Name)
+					return
+				}
+
+				c.logger.DebugMessage("GUID for service '%s' plan name '%s' is: %s",
+					s.ServiceOffering.Label, s.ServiceInstanceFields.Name, servicePlanGUID)
+
 				err = c.destCCSession.Services().CreateServiceInstance(s.ServiceInstanceFields.Name,
-					s.ServicePlan.GUID, s.ServiceInstanceFields.Params, s.ServiceInstanceFields.Tags)
+					servicePlanGUID, s.ServiceInstanceFields.Params, s.ServiceInstanceFields.Tags)
 				if err != nil {
 					c.logger.UI.Failed(err.Error())
 					return
@@ -318,6 +353,8 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 				c.logger.UI.Failed(err.Error())
 				return
 			}
+			destServiceInstanceMap[s.ServiceInstanceFields.Name] = serviceInstance
+
 			for _, g := range rebindAppGUIDS {
 				c.logger.DebugMessage("Rebinding app with GUID %s to service %s.", g, serviceInstance.ServiceInstanceFields.Name)
 				err = c.destCCSession.ServiceBindings().Create(serviceInstance.ServiceInstanceFields.GUID, g, make(map[string]interface{}))
@@ -332,7 +369,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			c.logger.UI.Say("\nCreating application copies at destination...")
 
 			for _, a := range applicationsToCopy {
-				c.logger.UI.Say("  + %s", terminal.EntityNameColor(a.srcApp.ApplicationFields.Name))
+				c.logger.UI.Say("+ %s", terminal.EntityNameColor(a.srcApp.ApplicationFields.Name))
 
 				destApp, err := c.destCCSession.Applications().Read(a.srcApp.ApplicationFields.Name)
 				if err != nil {
@@ -354,14 +391,34 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 				params.State = &state
 				params.BuildpackURL = nil
 				params.DockerImage = nil
+				params.StackGUID = nil
 				params.SpaceGUID = &c.destSpace.GUID
-				params.ServicesToBind = a.bindServices
 
-				destApp, err = c.destCCSession.Applications().Create(params)
+				c.logger.DebugMessage("Uploading droplet of applcation %s at %s.", a.srcApp.ApplicationFields.Name, a.dropletPath)
+				destApp, err = c.destCCSession.UploadDroplet(params, a.dropletPath)
 				if err != nil {
 					c.logger.UI.Failed(err.Error())
 					return
 				}
+
+				c.logger.DebugMessage("Binding application %s to services %v.", a.srcApp.ApplicationFields.Name, a.bindServices)
+				for _, s := range a.bindServices {
+					err = c.destCCSession.ServiceBindings().Create(
+						destServiceInstanceMap[s].ServiceInstanceFields.GUID,
+						destApp.ApplicationFields.GUID, make(map[string]interface{}))
+					if err != nil {
+						c.logger.UI.Failed(err.Error())
+						return
+					}
+				}
+
+				state = "started"
+				_, err = c.destCCSession.Applications().Update(destApp.ApplicationFields.GUID, models.AppParams{State: &state})
+				if err != nil {
+					c.logger.UI.Failed(err.Error())
+					return
+				}
+
 				c.logger.DebugMessage("Created new application copy: %# v", destApp)
 			}
 		}
@@ -428,9 +485,9 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 
 		// Initialize and validate source and destination sessions
 		c.srcCCSession = c.sessionProvider.NewCloudControllerSessionFromFilepath(
-			c.targets.GetTargetConfigPath(currentTarget), c.logger.UI, c.logger.TracePrinter)
+			c.targets.GetTargetConfigPath(currentTarget), c.logger)
 		c.destCCSession = c.sessionProvider.NewCloudControllerSessionFromFilepath(
-			c.targets.GetTargetConfigPath(c.o.DestTarget), c.logger.UI, c.logger.TracePrinter)
+			c.targets.GetTargetConfigPath(c.o.DestTarget), c.logger)
 
 		if !c.srcCCSession.HasTarget() {
 			c.logger.UI.Failed("The CLI target org and space needs to be set.")
@@ -511,7 +568,7 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 func (c *CopyCommand) downloadDroplet(app string) string {
 
 	// Download application droplet
-	c.logger.UI.Say("  + download application %s", terminal.EntityNameColor(app))
+	c.logger.UI.Say("+ download application %s", terminal.EntityNameColor(app))
 
 	dropletAppPath := filepath.Join(filepath.Join(c.dropletDownloadPath, app), app) + ".tgz"
 	c.logger.DebugMessage("Downloading droplet '%s'.", dropletAppPath)

@@ -6,13 +6,11 @@ import (
 	"code.cloudfoundry.org/cli/cf/api/organizations"
 	"code.cloudfoundry.org/cli/cf/api/spaces"
 	"code.cloudfoundry.org/cli/cf/models"
-	"code.cloudfoundry.org/cli/cf/terminal"
-	"code.cloudfoundry.org/cli/cf/trace"
 )
 
 // CloudCountrollerSessionProvider -
 type CloudCountrollerSessionProvider interface {
-	NewCloudControllerSessionFromFilepath(configPath string, ui terminal.UI, logger trace.Printer) CloudControllerSession
+	NewCloudControllerSessionFromFilepath(configPath string, logger *Logger) CloudControllerSession
 }
 
 // CloudControllerSession -
@@ -32,13 +30,15 @@ type CloudControllerSession interface {
 	Organizations() organizations.OrganizationRepository
 	Spaces() spaces.SpaceRepository
 
-	ServiceSummary() api.ServiceSummaryRepository
 	Services() api.ServiceRepository
+	ServicePlans() api.ServicePlanRepository
+	ServiceSummary() api.ServiceSummaryRepository
 	UserProvidedServices() api.UserProvidedServiceInstanceRepository
 	ServiceKeys() api.ServiceKeyRepository
 
 	AppSummary() api.AppSummaryRepository
 	Applications() applications.Repository
+	UploadDroplet(models.AppParams, string) (models.Application, error)
 
 	ServiceBindings() api.ServiceBindingRepository
 	GetServiceCredentials(models.ServiceBindingFields) (*ServiceBindingDetail, error)
