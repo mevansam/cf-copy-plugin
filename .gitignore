@@ -26,3 +26,4 @@ command/download_droplet_cmd.go.bak
 env.sh
 _*
 
+cf-copy-plugin
