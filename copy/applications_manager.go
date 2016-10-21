@@ -224,7 +224,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 			} else {
 				host = r.Host
 			}
-			route, err = am.destCCSession.Routes().Create(host, domain, "", -1, false)
+			route, err = am.destCCSession.Routes().Create(host, domain, "", 0, false)
 			if err != nil {
 				return
 			}
