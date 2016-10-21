@@ -237,7 +237,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 
 // Close -
 func (am *CfCliApplicationsManager) Close() {
-	// os.RemoveAll(am.dropletDownloadPath)
+	os.RemoveAll(am.dropletDownloadPath)
 }
 
 func (am *CfCliApplicationsManager) downloadDroplet(app string) string {
@@ -248,8 +248,8 @@ func (am *CfCliApplicationsManager) downloadDroplet(app string) string {
 	dropletAppPath := filepath.Join(filepath.Join(am.dropletDownloadPath, app), app) + ".tgz"
 	am.logger.DebugMessage("Downloading droplet '%s'.", dropletAppPath)
 
-	// os.MkdirAll(filepath.Dir(dropletAppPath), os.ModePerm)
-	// am.dropletDownloader.SaveDroplet(app, dropletAppPath)
+	os.MkdirAll(filepath.Dir(dropletAppPath), os.ModePerm)
+	am.dropletDownloader.SaveDroplet(app, dropletAppPath)
 	return dropletAppPath
 }
 
