@@ -2,39 +2,33 @@ package command
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
-	"code.cloudfoundry.org/cli/cf/configuration/confighelpers"
-	"code.cloudfoundry.org/cli/cf/errors"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/terminal"
 	"code.cloudfoundry.org/cli/plugin"
-	"github.com/krujos/download_droplet_plugin/droplet"
+	"github.com/mevansam/cf-copy-plugin/copy"
 	"github.com/mevansam/cf-copy-plugin/helpers"
 )
 
 // CopyCommand -
 type CopyCommand struct {
-	logger *helpers.Logger
-	cli    plugin.CliConnection
-
-	o *CopyOptions
-
 	sessionProvider helpers.CloudCountrollerSessionProvider
-	srcCCSession    helpers.CloudControllerSession
-	destCCSession   helpers.CloudControllerSession
+	targets         helpers.Targets
+
+	o      *CopyOptions
+	cli    plugin.CliConnection
+	logger *helpers.Logger
+
+	am copy.ApplicationsManager
+	sm copy.ServicesManager
 
 	srcOrg    models.OrganizationFields
 	srcSpace  models.SpaceFields
 	destOrg   models.OrganizationFields
 	destSpace models.SpaceFields
 
-	dropletDownloader   droplet.Droplet
-	dropletDownloadPath string
-
-	targets helpers.Targets
+	srcCCSession  helpers.CloudControllerSession
+	destCCSession helpers.CloudControllerSession
 }
 
 // CopyOptions -
@@ -82,17 +76,13 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 	if ok, err = c.initialize(); ok {
 
 		var (
+			err     error
 			message string
 
-			applicationsToCopy []*appInfo
-			appInfoMap         map[string]*appInfo
-
-			serviceInstance        models.ServiceInstance
-			serviceInstancesToCopy []models.ServiceInstance
-
-			destServiceInstanceMap map[string]models.ServiceInstance
-
-			destUserProvidedServices []models.UserProvidedService
+			am copy.ApplicationsManager
+			ac copy.ApplicationCollection
+			sm copy.ServicesManager
+			sc copy.ServiceCollection
 		)
 
 		currentTarget, _ := c.targets.GetCurrentTarget()
@@ -126,300 +116,49 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			defer c.srcCCSession.SetSessionOrg(c.srcOrg)
 			defer c.srcCCSession.SetSessionSpace(c.srcSpace)
 		}
-		defer os.RemoveAll(c.dropletDownloadPath)
 
-		// Retrieve applications to copied
+		am, err = copy.NewCfCliApplicationsManager(c.srcCCSession, c.destCCSession, cli, c.logger)
+		if err != nil {
+			c.logger.UI.Failed(err.Error())
+			return
+		}
+		defer am.Close()
 
-		applicationsToCopy = []*appInfo{}
+		sm, err = copy.NewCfCliServicesManager(c.srcCCSession, c.destCCSession, o.DestTarget, o.DestOrg, o.DestSpace, c.logger)
+		if err != nil {
+			c.logger.UI.Failed(err.Error())
+			return
+		}
+		defer sm.Close()
+
 		if !c.o.ServicesOnly {
-			c.logger.UI.Say("\nDownloading droplets of applications that will be copied...")
-
-			appInfoMap = make(map[string]*appInfo)
-			for _, n := range o.SourceAppNames {
-				a, err := c.srcCCSession.Applications().Read(n)
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-				info := appInfo{
-					srcApp:       a,
-					dropletPath:  c.downloadDroplet(n),
-					bindServices: []string{},
-				}
-				applicationsToCopy = append(applicationsToCopy, &info)
-				appInfoMap[a.ApplicationFields.Name] = &info
-			}
-		}
-
-		// Retrieve details of service instances to be copied
-
-		upsSummaries, err := c.srcCCSession.UserProvidedServices().GetSummaries()
-		if err != nil {
-			c.logger.UI.Failed(err.Error())
-			return
-		}
-		upsServices := []models.UserProvidedService{}
-		for _, u := range upsSummaries.Resources {
-			upsServices = append(upsServices, u.UserProvidedService)
-		}
-
-		services, err := c.srcCCSession.ServiceSummary().GetSummariesInCurrentSpace()
-		if err != nil {
-			c.logger.UI.Failed(err.Error())
-			return
-		}
-		for _, s := range services {
-			serviceInstance, err = c.srcCCSession.Services().FindInstanceByName(s.ServiceInstanceFields.Name)
+			ac, err = am.ApplicationsToBeCopied(o.SourceAppNames)
 			if err != nil {
 				c.logger.UI.Failed(err.Error())
 				return
 			}
-
-			if appNames, contains := helpers.ContainsInStrings(o.SourceAppNames, s.ServiceInstanceFields.ApplicationNames); contains {
-
-				serviceInstance.ApplicationNames = appNames
-				serviceInstancesToCopy = append(serviceInstancesToCopy, serviceInstance)
-
-				for _, name := range appNames {
-					if info, ok := appInfoMap[name]; ok {
-						info.bindServices = append(info.bindServices, serviceInstance.ServiceInstanceFields.Name)
-					}
-				}
-
-				keyName := fmt.Sprintf("__%s_copy_for_/%s/%s/%s",
-					serviceInstance.ServiceInstanceFields.Name, o.DestTarget, o.DestOrg, o.DestSpace)
-				if serviceKey, contains := helpers.ContainsServiceKey(keyName, serviceInstance.ServiceKeys); contains {
-					c.logger.DebugMessage("Deleting existing service key %s for service %s.", keyName, serviceInstance.ServiceInstanceFields.Name)
-					c.srcCCSession.ServiceKeys().DeleteServiceKey(serviceKey.GUID)
-				}
-
-				if ups, contains := helpers.ContainsUserProvidedService(serviceInstance.ServiceInstanceFields.Name, upsServices); contains &&
-					len(serviceInstance.ServicePlan.GUID) == 0 && len(serviceInstance.ServiceOffering.GUID) == 0 {
-
-					c.logger.DebugMessage("User provided service '%s' to copy: %# v",
-						serviceInstance.ServiceInstanceFields.Name, serviceInstance)
-					destUserProvidedServices = append(destUserProvidedServices, *ups)
-
-				} else {
-
-					// Managed services copied as a user-provided-service in the target space
-					// will use credentials from a service key created in the source space.
-
-					if _, contains := helpers.ContainsInStrings([]string{serviceInstance.ServiceInstanceFields.Name}, o.CopyAsUpsServices); contains {
-
-						c.logger.DebugMessage("Managed service '%s' that will be copied as a user provided service: %# v",
-							serviceInstance.ServiceInstanceFields.Name, serviceInstance)
-
-						c.logger.DebugMessage(
-							"Creating service key %s for service %s to be used as source of credentials for target user-provided-service.",
-							keyName, serviceInstance.ServiceInstanceFields.Name)
-
-						c.srcCCSession.ServiceKeys().CreateServiceKey(serviceInstance.ServiceInstanceFields.GUID, keyName, make(map[string]interface{}))
-
-						serviceKey, err := c.srcCCSession.ServiceKeys().GetServiceKey(serviceInstance.ServiceInstanceFields.GUID, keyName)
-						if err != nil {
-							c.logger.UI.Failed(err.Error())
-							return
-						}
-
-						c.logger.DebugMessage("Service key created for copying managed service as a user provided service: %# v", serviceKey)
-
-						ups := models.UserProvidedService{
-							Name:        serviceInstance.ServiceInstanceFields.Name,
-							Credentials: serviceKey.Credentials,
-						}
-						destUserProvidedServices = append(destUserProvidedServices, ups)
-					} else {
-						c.logger.DebugMessage("Managed service '%s' that will be re-created as a managed service at the destination: %# v",
-							serviceInstance.ServiceInstanceFields.Name, serviceInstance)
-					}
-				}
-			}
 		}
 
-		c.logger.DebugMessage("Applications to be copied => %# v", applicationsToCopy)
-		c.logger.DebugMessage("Services to be copied => %# v", serviceInstancesToCopy)
+		sc, err = sm.ServicesToBeCopied(o.SourceAppNames, o.CopyAsUpsServices)
+		if err != nil {
+			c.logger.UI.Failed(err.Error())
+			return
+		}
 
 		c.destCCSession.SetSessionOrg(c.destOrg)
 		c.destCCSession.SetSessionSpace(c.destSpace)
 
-		// Create service instance copies at destination
-
-		c.logger.UI.Say("\nCreating service copies at destination...")
-
-		servicesAtDest, err := c.destCCSession.ServiceSummary().GetSummariesInCurrentSpace()
+		err = sm.DoCopy(sc)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return
 		}
-		destServiceInstanceMap = make(map[string]models.ServiceInstance)
-		for _, s := range serviceInstancesToCopy {
 
-			rebindAppGUIDS := []string{}
-
-			if _, contains := helpers.ContainsService(s.ServiceInstanceFields.Name, servicesAtDest); contains {
-
-				serviceInstance, err = c.destCCSession.Services().FindInstanceByName(s.ServiceInstanceFields.Name)
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-
-				c.logger.DebugMessage("Unbinding any applications bound to service instance %s at destination.", s.ServiceInstanceFields.Name)
-				for _, appName := range serviceInstance.ApplicationNames {
-					app, err := c.destCCSession.Applications().Read(appName)
-					if err != nil {
-						if _, ok := err.(*errors.ModelNotFoundError); !ok {
-							c.logger.UI.Failed(err.Error())
-							return
-						}
-					} else {
-						c.destCCSession.ServiceBindings().Delete(serviceInstance, app.ApplicationFields.GUID)
-						rebindAppGUIDS = append(rebindAppGUIDS, app.ApplicationFields.GUID)
-					}
-				}
-
-				c.logger.DebugMessage("Deleting all service keys of service instance %s at destination.", s.ServiceInstanceFields.Name)
-				for _, serviceKey := range serviceInstance.ServiceKeys {
-					c.destCCSession.ServiceKeys().DeleteServiceKey(serviceKey.GUID)
-				}
-
-				c.logger.DebugMessage("Deleting existing service instance %s at destination.", s.ServiceInstanceFields.Name)
-				err = c.destCCSession.Services().DeleteService(serviceInstance)
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-			}
-			if ups, contains := helpers.ContainsUserProvidedService(s.ServiceInstanceFields.Name, destUserProvidedServices); contains {
-
-				c.logger.UI.Say("+ %s as a user provided service instance at destination",
-					terminal.EntityNameColor(s.ServiceInstanceFields.Name))
-
-				err = c.destCCSession.UserProvidedServices().Create(ups.Name, "", "", ups.Credentials)
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-				c.logger.DebugMessage("Created user provided service %s at destination.", s.ServiceInstanceFields.Name)
-
-			} else {
-				c.logger.UI.Say("+ %s as a managed service instance at destination",
-					terminal.EntityNameColor(s.ServiceInstanceFields.Name))
-
-				c.logger.DebugMessage("Debug looking up the GUID for service '%s' plan name '%s'",
-					s.ServiceOffering.Label, s.ServicePlan.Name)
-
-				offerings, err := c.destCCSession.Services().FindServiceOfferingsForSpaceByLabel(
-					c.destCCSession.GetSessionSpace().GUID, s.ServiceOffering.Label)
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-
-				servicePlanGUID := ""
-				for _, o := range offerings {
-					plans, err := c.destCCSession.ServicePlans().Search(map[string]string{"service_guid": o.GUID})
-					if err != nil {
-						c.logger.UI.Failed(err.Error())
-						return
-					}
-					for _, p := range plans {
-						if p.Name == s.ServicePlan.Name {
-							servicePlanGUID = p.GUID
-						}
-					}
-				}
-				if servicePlanGUID == "" {
-					c.logger.UI.Failed("Unable to determine the GUID for service '%s' plan name '%s'",
-						s.ServiceOffering.Label, s.ServiceInstanceFields.Name)
-					return
-				}
-
-				c.logger.DebugMessage("GUID for service '%s' plan name '%s' is: %s",
-					s.ServiceOffering.Label, s.ServiceInstanceFields.Name, servicePlanGUID)
-
-				err = c.destCCSession.Services().CreateServiceInstance(s.ServiceInstanceFields.Name,
-					servicePlanGUID, s.ServiceInstanceFields.Params, s.ServiceInstanceFields.Tags)
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-				c.logger.DebugMessage("Created managed service %s at destination.", s.ServiceInstanceFields.Name)
-			}
-
-			serviceInstance, err = c.destCCSession.Services().FindInstanceByName(s.ServiceInstanceFields.Name)
+		if !c.o.ServicesOnly {
+			err = am.DoCopy(ac, sc, o.AppHostFormat, o.AppRouteDomain)
 			if err != nil {
 				c.logger.UI.Failed(err.Error())
 				return
-			}
-			destServiceInstanceMap[s.ServiceInstanceFields.Name] = serviceInstance
-
-			for _, g := range rebindAppGUIDS {
-				c.logger.DebugMessage("Rebinding app with GUID %s to service %s.", g, serviceInstance.ServiceInstanceFields.Name)
-				err = c.destCCSession.ServiceBindings().Create(serviceInstance.ServiceInstanceFields.GUID, g, make(map[string]interface{}))
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-			}
-		}
-
-		if !c.o.ServicesOnly {
-			c.logger.UI.Say("\nCreating application copies at destination...")
-
-			for _, a := range applicationsToCopy {
-				c.logger.UI.Say("+ %s", terminal.EntityNameColor(a.srcApp.ApplicationFields.Name))
-
-				destApp, err := c.destCCSession.Applications().Read(a.srcApp.ApplicationFields.Name)
-				if err != nil {
-					if _, ok := err.(*errors.ModelNotFoundError); !ok {
-						c.logger.UI.Failed(err.Error())
-						return
-					}
-				} else {
-					c.logger.DebugMessage("Deleting existing application to be copied '%s' at destination.", destApp.ApplicationFields.Name)
-					err = c.destCCSession.Applications().Delete(destApp.ApplicationFields.GUID)
-					if err != nil {
-						c.logger.UI.Failed(err.Error())
-					}
-				}
-
-				state := strings.ToUpper(models.ApplicationStateStopped)
-
-				params := a.srcApp.ToParams()
-				params.State = &state
-				params.BuildpackURL = nil
-				params.DockerImage = nil
-				params.StackGUID = nil
-				params.SpaceGUID = &c.destSpace.GUID
-
-				c.logger.DebugMessage("Uploading droplet of applcation %s at %s.", a.srcApp.ApplicationFields.Name, a.dropletPath)
-				destApp, err = c.destCCSession.UploadDroplet(params, a.dropletPath)
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-
-				c.logger.DebugMessage("Binding application %s to services %v.", a.srcApp.ApplicationFields.Name, a.bindServices)
-				for _, s := range a.bindServices {
-					err = c.destCCSession.ServiceBindings().Create(
-						destServiceInstanceMap[s].ServiceInstanceFields.GUID,
-						destApp.ApplicationFields.GUID, make(map[string]interface{}))
-					if err != nil {
-						c.logger.UI.Failed(err.Error())
-						return
-					}
-				}
-
-				state = "started"
-				_, err = c.destCCSession.Applications().Update(destApp.ApplicationFields.GUID, models.AppParams{State: &state})
-				if err != nil {
-					c.logger.UI.Failed(err.Error())
-					return
-				}
-
-				c.logger.DebugMessage("Created new application copy: %# v", destApp)
 			}
 		}
 
@@ -449,8 +188,6 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 		apps  []models.Application
 		org   models.Organization
 		space models.Space
-
-		cfPath string
 	)
 
 	if output, err = c.cli.CliCommandWithoutTerminalOutput("plugins"); err != nil {
@@ -549,31 +286,7 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 		c.logger.DebugMessage("Destination Org => %# v", c.destOrg)
 		c.logger.DebugMessage("Desintation Space => %# v", c.destSpace)
 
-		cfPath, err = confighelpers.DefaultFilePath()
-		if err != nil {
-			c.logger.UI.Failed(err.Error())
-			return
-		}
-		c.dropletDownloadPath = filepath.Join(filepath.Dir(cfPath), "droplets")
-		c.dropletDownloader = droplet.NewCFDroplet(c.cli, &droplet.CFDownloader{
-			Cli:    c.cli,
-			Writer: new(droplet.CFFileWriter),
-		})
-
 		ok = true
 	}
 	return
-}
-
-func (c *CopyCommand) downloadDroplet(app string) string {
-
-	// Download application droplet
-	c.logger.UI.Say("+ download application %s", terminal.EntityNameColor(app))
-
-	dropletAppPath := filepath.Join(filepath.Join(c.dropletDownloadPath, app), app) + ".tgz"
-	c.logger.DebugMessage("Downloading droplet '%s'.", dropletAppPath)
-
-	os.MkdirAll(filepath.Dir(dropletAppPath), os.ModePerm)
-	c.dropletDownloader.SaveDroplet(app, dropletAppPath)
-	return dropletAppPath
 }

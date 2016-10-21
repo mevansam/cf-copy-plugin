@@ -56,10 +56,10 @@ var _ = Describe("Copy Command Tests", func() {
 			}
 			output := CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
-					DestSpace:     "fake_dest_space",
-					DestOrg:       "fake_dest_org",
-					DestTarget:    "fake_unknown_dest_target",
-					SourceAppName: "fake_source_app",
+					DestSpace:      "fake_dest_space",
+					DestOrg:        "fake_dest_org",
+					DestTarget:     "fake_unknown_dest_target",
+					SourceAppNames: []string{"fake_source_app"},
 				})
 			})
 			Expect(output[0]).To(Equal("FAILED"))
@@ -72,10 +72,10 @@ var _ = Describe("Copy Command Tests", func() {
 			mockSession.MockHasTarget = func() bool { return false }
 			output := CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
-					DestSpace:     "fake_dest_space",
-					DestOrg:       "fake_dest_org",
-					DestTarget:    "fake_dest_target",
-					SourceAppName: "fake_source_app",
+					DestSpace:      "fake_dest_space",
+					DestOrg:        "fake_dest_org",
+					DestTarget:     "fake_dest_target",
+					SourceAppNames: []string{"fake_source_app"},
 				})
 			})
 			Expect(output[0]).To(Equal("FAILED"))
@@ -90,9 +90,9 @@ var _ = Describe("Copy Command Tests", func() {
 			mockSession.MockGetSessionSpace = func() models.SpaceFields { return models.SpaceFields{Name: "fake_dest_space"} }
 			output := CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
-					DestSpace:     "fake_dest_space",
-					DestOrg:       "fake_dest_org",
-					SourceAppName: "fake_source_app",
+					DestSpace:      "fake_dest_space",
+					DestOrg:        "fake_dest_org",
+					SourceAppNames: []string{"fake_source_app"},
 				})
 			})
 			Expect(output[0]).To(Equal("FAILED"))
@@ -135,9 +135,9 @@ var _ = Describe("Copy Command Tests", func() {
 			}
 			/*output :=*/ CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
-					DestSpace:     "fake_dest_space",
-					DestOrg:       "fake_dest_org",
-					SourceAppName: "fake_source_app",
+					DestSpace:      "fake_dest_space",
+					DestOrg:        "fake_dest_org",
+					SourceAppNames: []string{"fake_source_app"},
 				})
 			})
 		})

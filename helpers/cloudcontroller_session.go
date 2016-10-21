@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"os"
+
 	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/applications"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
@@ -35,13 +37,15 @@ type CloudControllerSession interface {
 	ServiceSummary() api.ServiceSummaryRepository
 	UserProvidedServices() api.UserProvidedServiceInstanceRepository
 	ServiceKeys() api.ServiceKeyRepository
+	ServiceBindings() api.ServiceBindingRepository
 
 	AppSummary() api.AppSummaryRepository
 	Applications() applications.Repository
-	UploadDroplet(models.AppParams, string) (models.Application, error)
+	Routes() api.RouteRepository
+	Domains() api.DomainRepository
 
-	ServiceBindings() api.ServiceBindingRepository
 	GetServiceCredentials(models.ServiceBindingFields) (*ServiceBindingDetail, error)
+	UploadDroplet(string, string, *os.File) error
 }
 
 // Model structs not present in CF CLI API

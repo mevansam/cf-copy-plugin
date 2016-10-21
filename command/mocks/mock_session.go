@@ -1,6 +1,8 @@
 package mock_test
 
 import (
+	"os"
+
 	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/applications"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
@@ -11,24 +13,27 @@ import (
 
 // MockSession -
 type MockSession struct {
-	MockHasTarget             func() bool
-	MockGetSessionUsername    func() string
-	MockGetSessionOrg         func() models.OrganizationFields
-	MockSetSessionOrg         func(models.OrganizationFields)
-	MockGetSessionSpace       func() models.SpaceFields
-	MockSetSessionSpace       func(models.SpaceFields)
-	MockOrganizations         func() organizations.OrganizationRepository
-	MockSpaces                func() spaces.SpaceRepository
-	MockServices              func() api.ServiceRepository
-	MockServicePlans          func() api.ServicePlanRepository
-	MockServiceSummary        func() api.ServiceSummaryRepository
-	MockUserProvidedServices  func() api.UserProvidedServiceInstanceRepository
-	MockServiceKeys           func() api.ServiceKeyRepository
-	MockAppSummary            func() api.AppSummaryRepository
-	MockApplications          func() applications.Repository
-	MockUploadDroplet         func(models.AppParams, string) (models.Application, error)
-	MockServiceBindings       func() api.ServiceBindingRepository
+	MockHasTarget            func() bool
+	MockGetSessionUsername   func() string
+	MockGetSessionOrg        func() models.OrganizationFields
+	MockSetSessionOrg        func(models.OrganizationFields)
+	MockGetSessionSpace      func() models.SpaceFields
+	MockSetSessionSpace      func(models.SpaceFields)
+	MockOrganizations        func() organizations.OrganizationRepository
+	MockSpaces               func() spaces.SpaceRepository
+	MockServices             func() api.ServiceRepository
+	MockServicePlans         func() api.ServicePlanRepository
+	MockServiceSummary       func() api.ServiceSummaryRepository
+	MockUserProvidedServices func() api.UserProvidedServiceInstanceRepository
+	MockServiceKeys          func() api.ServiceKeyRepository
+	MockServiceBindings      func() api.ServiceBindingRepository
+	MockAppSummary           func() api.AppSummaryRepository
+	MockApplications         func() applications.Repository
+	MockRoutes               func() api.RouteRepository
+	MockDomains              func() api.DomainRepository
+
 	MockGetServiceCredentials func(models.ServiceBindingFields) (*helpers.ServiceBindingDetail, error)
+	MockUploadDroplet         func(string, string, *os.File) error
 }
 
 // NewCloudControllerSessionFromFilepath -
@@ -115,9 +120,14 @@ func (m *MockSession) Applications() applications.Repository {
 	return m.MockApplications()
 }
 
-// UploadDroplet -
-func (m *MockSession) UploadDroplet(params models.AppParams, dropletPath string) (models.Application, error) {
-	return m.MockUploadDroplet(params, dropletPath)
+// Routes -
+func (m *MockSession) Routes() api.RouteRepository {
+	return m.MockRoutes()
+}
+
+// Domains -
+func (m *MockSession) Domains() api.DomainRepository {
+	return m.MockDomains()
 }
 
 // ServiceBindings -
@@ -128,4 +138,9 @@ func (m *MockSession) ServiceBindings() api.ServiceBindingRepository {
 // GetServiceCredentials -
 func (m *MockSession) GetServiceCredentials(serviceBinding models.ServiceBindingFields) (*helpers.ServiceBindingDetail, error) {
 	return m.MockGetServiceCredentials(serviceBinding)
+}
+
+// UploadDroplet -
+func (m *MockSession) UploadDroplet(appGUID string, contentType string, dropletUploadRequest *os.File) error {
+	return m.MockUploadDroplet(appGUID, contentType, dropletUploadRequest)
 }

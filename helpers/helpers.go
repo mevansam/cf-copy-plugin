@@ -1,6 +1,10 @@
 package helpers
 
-import "code.cloudfoundry.org/cli/cf/models"
+import (
+	"time"
+
+	"code.cloudfoundry.org/cli/cf/models"
+)
 
 // ContainsInStrings -
 func ContainsInStrings(contains []string, strings []string) ([]string, bool) {
@@ -53,4 +57,17 @@ func ContainsServiceKey(name string, serviceKeys []models.ServiceKeyFields) (*mo
 		}
 	}
 	return nil, false
+}
+
+// RetryOnError -
+func RetryOnError(wait time.Duration, count int, callback func() error) (err error) {
+	for i := count; i > 0; i-- {
+		err = callback()
+		if err == nil {
+			return
+		}
+		time.Sleep(wait * time.Second)
+		wait *= 2
+	}
+	return
 }

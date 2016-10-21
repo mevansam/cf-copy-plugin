@@ -36,17 +36,17 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 		Version: plugin.VersionType{
 			Major: 0,
 			Minor: 0,
-			Build: 1,
+			Build: 2,
 		},
 		Commands: []plugin.Command{
 			{
 				Name:     "copy",
 				HelpText: "Copy current space artifacts to another space. Uses targets saved by 'Targets' plugin when copying to another Cloud Foundry target.",
 				UsageDetails: plugin.Usage{
-					Usage: "cf copy DEST_SPACE [DEST_ORG] [DEST_TARGET] [--apps|-a APPLICATIONS] [---host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] [--ups|-s COPY_AS_UPS] [--services-only]",
+					Usage: "cf copy DEST_SPACE [DEST_ORG] [DEST_TARGET] [--apps|-a APPLICATIONS] [--host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] [--ups|-s COPY_AS_UPS] [--services-only|o]",
 					Options: map[string]string{
 						"-apps, -a":          "Copy only the given applications and their bound services. Default is to copy all applications.",
-						"-host-format, -n":   "Format of app route's hostname i.e. \"{{.hostname}}-{{.space}}\".",
+						"-host-format, -n":   "Format of app route's hostname to make it unique i.e. \"{{.host}}-{{.space}}\".",
 						"-domain, -m":        "Domain to use to create routes to copied apps with same hostname.",
 						"-ups, -s":           "Comma separated list of services that will be copied as user provided services in the target space.",
 						"-services-only, -o": "Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.",

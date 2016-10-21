@@ -41,7 +41,8 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.DestSpace).To(Equal("fake_space"))
 				Expect(o.DestOrg).To(Equal("fake_org"))
 				Expect(o.DestTarget).To(Equal("fake_target"))
-				Expect(o.SourceAppName).To(Equal("fake_app"))
+				Expect(o.SourceAppNames[0]).To(Equal("fake_app1"))
+				Expect(o.SourceAppNames[1]).To(Equal("fake_app2"))
 				Expect(o.CopyAsUpsServices[0]).To(Equal("fake_svc1"))
 				Expect(o.CopyAsUpsServices[1]).To(Equal("fake_svc2"))
 				Expect(o.ServicesOnly).To(BeTrue())
@@ -53,34 +54,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 					"fake_space",
 					"fake_org",
 					"fake_target",
-					"--app", "fake_app",
-					"--ups", "fake_svc1,fake_svc2",
-					"--services-only",
-				})
-			})
-
-			Expect(output[0]).To(Equal("Done"))
-		})
-
-		It("Should parse all args", func() {
-
-			copyPluginFake := NewCopyPlugin(NewMockCopyCommand(func(o *CopyOptions) {
-				Expect(o.DestSpace).To(Equal("fake_space"))
-				Expect(o.DestOrg).To(Equal("fake_org"))
-				Expect(o.DestTarget).To(Equal("fake_target"))
-				Expect(o.SourceAppName).To(Equal("fake_app"))
-				Expect(o.CopyAsUpsServices[0]).To(Equal("fake_svc1"))
-				Expect(o.CopyAsUpsServices[1]).To(Equal("fake_svc2"))
-				Expect(o.ServicesOnly).To(BeTrue())
-			}))
-
-			output := CaptureOutput(func() {
-				copyPluginFake.Run(fakeCliConnection, []string{
-					"copy",
-					"fake_space",
-					"fake_org",
-					"fake_target",
-					"--app", "fake_app",
+					"--apps", "fake_app,fake_app2",
 					"--ups", "fake_svc1,fake_svc2",
 					"--services-only",
 				})
@@ -95,7 +69,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.DestSpace).To(Equal("fake_space"))
 				Expect(o.DestOrg).To(Equal(""))
 				Expect(o.DestTarget).To(Equal(""))
-				Expect(o.SourceAppName).To(Equal(""))
+				Expect(o.SourceAppNames).To(BeEmpty())
 				Expect(o.CopyAsUpsServices).To(BeEmpty())
 				Expect(o.ServicesOnly).To(BeFalse())
 			}))
@@ -116,7 +90,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.DestSpace).To(Equal("fake_space"))
 				Expect(o.DestOrg).To(Equal("fake_org"))
 				Expect(o.DestTarget).To(Equal(""))
-				Expect(o.SourceAppName).To(Equal("fake_app"))
+				Expect(o.SourceAppNames[0]).To(Equal("fake_app"))
 				Expect(o.CopyAsUpsServices).To(BeEmpty())
 				Expect(o.ServicesOnly).To(BeFalse())
 			}))

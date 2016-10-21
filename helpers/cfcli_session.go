@@ -2,11 +2,7 @@ package helpers
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
-	"mime/multipart"
 	"os"
-	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/cli/cf/api"
@@ -14,6 +10,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/api/authentication"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
 	"code.cloudfoundry.org/cli/cf/api/spaces"
+	"code.cloudfoundry.org/cli/cf/api/strategy"
 	"code.cloudfoundry.org/cli/cf/configuration/coreconfig"
 	"code.cloudfoundry.org/cli/cf/i18n"
 	"code.cloudfoundry.org/cli/cf/models"
@@ -136,6 +133,11 @@ func (s *CfCliSession) ServiceKeys() api.ServiceKeyRepository {
 	return api.NewCloudControllerServiceKeyRepository(s.config, s.ccGateway)
 }
 
+// ServiceBindings -
+func (s *CfCliSession) ServiceBindings() api.ServiceBindingRepository {
+	return api.NewCloudControllerServiceBindingRepository(s.config, s.ccGateway)
+}
+
 // AppSummary -
 func (s *CfCliSession) AppSummary() api.AppSummaryRepository {
 	return api.NewCloudControllerAppSummaryRepository(s.config, s.ccGateway)
@@ -146,58 +148,14 @@ func (s *CfCliSession) Applications() applications.Repository {
 	return applications.NewCloudControllerRepository(s.config, s.ccGateway)
 }
 
-// UploadDroplet -
-func (s *CfCliSession) UploadDroplet(params models.AppParams, dropletPath string) (app models.Application, err error) {
-	app, err = s.Applications().Create(params)
-	if err != nil {
-		return
-	}
-
-	dropletUploadRequest, err := ioutil.TempFile("", ".droplet")
-	if err != nil {
-		return
-	}
-	file, err := os.Open(dropletPath)
-	if err != nil {
-		return
-	}
-	defer func() {
-		file.Close()
-		dropletUploadRequest.Close()
-		os.Remove(dropletUploadRequest.Name())
-	}()
-
-	writer := multipart.NewWriter(dropletUploadRequest)
-	part, err := writer.CreateFormFile("droplet", filepath.Base(dropletPath))
-	if err != nil {
-		return
-	}
-	_, err = io.Copy(part, file)
-	if err != nil {
-		return
-	}
-	err = writer.Close()
-	if err != nil {
-		return
-	}
-
-	url := fmt.Sprintf("%s/v2/apps/%s/droplet/upload", s.config.APIEndpoint(), app.ApplicationFields.GUID)
-	request, err := s.ccGateway.NewRequestForFile("PUT", url, s.config.AccessToken(), dropletUploadRequest)
-	if err != nil {
-		return
-	}
-	request.HTTPReq.Header.Set("Content-Type", writer.FormDataContentType())
-
-	response := make(map[string]interface{})
-	_, err = s.ccGateway.PerformRequestForJSONResponse(request, &response)
-	s.logger.DebugMessage("Response from droplet upload: #% v", response)
-
-	return
+// Routes -
+func (s *CfCliSession) Routes() api.RouteRepository {
+	return api.NewCloudControllerRouteRepository(s.config, s.ccGateway)
 }
 
-// ServiceBindings -
-func (s *CfCliSession) ServiceBindings() api.ServiceBindingRepository {
-	return api.NewCloudControllerServiceBindingRepository(s.config, s.ccGateway)
+// Domains -
+func (s *CfCliSession) Domains() api.DomainRepository {
+	return api.NewCloudControllerDomainRepository(s.config, s.ccGateway, strategy.NewEndpointStrategy(s.config.APIVersion()))
 }
 
 // GetServiceCredentials -
@@ -209,4 +167,21 @@ func (s *CfCliSession) GetServiceCredentials(serviceBinding models.ServiceBindin
 		return nil, err
 	}
 	return serviceBindingDetail, nil
+}
+
+// UploadDroplet -
+func (s *CfCliSession) UploadDroplet(appGUID string, contentType string, dropletUploadRequest *os.File) error {
+
+	url := fmt.Sprintf("%s/v2/apps/%s/droplet/upload", s.config.APIEndpoint(), appGUID)
+	request, err := s.ccGateway.NewRequestForFile("PUT", url, s.config.AccessToken(), dropletUploadRequest)
+	if err != nil {
+		return err
+	}
+	request.HTTPReq.Header.Set("Content-Type", contentType)
+
+	response := make(map[string]interface{})
+	_, err = s.ccGateway.PerformRequestForJSONResponse(request, &response)
+	s.logger.DebugMessage("Response from droplet upload: #% v", response)
+
+	return err
 }
