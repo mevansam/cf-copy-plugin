@@ -43,14 +43,18 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 				Name:     "copy",
 				HelpText: "Copy current space artifacts to another space. Uses targets saved by 'Targets' plugin when copying to another Cloud Foundry target.",
 				UsageDetails: plugin.Usage{
-					Usage: "cf copy DEST_SPACE [DEST_ORG] [DEST_TARGET] [--apps|-a APPLICATIONS] [--host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] [--ups|-s COPY_AS_UPS] [--services-only|o]",
+					Usage: "cf copy DEST_SPACE [DEST_ORG] [DEST_TARGET] " +
+						"[--apps|-a APPLICATIONS] [--host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] " +
+						"[--ups|-s COPY_AS_UPS] [--services-only|-o] [--recreate-services|-r]" +
+						"[-debug|-d]",
 					Options: map[string]string{
-						"-apps, -a":          "Copy only the given applications and their bound services. Default is to copy all applications.",
-						"-host-format, -n":   "Format of app route's hostname to make it unique i.e. \"{{.host}}-{{.space}}\".",
-						"-domain, -m":        "Domain to use to create routes to copied apps with same hostname.",
-						"-ups, -s":           "Comma separated list of services that will be copied as user provided services in the target space.",
-						"-services-only, -o": "Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.",
-						"-debug, -d":         "Output debug messages.",
+						"-apps, -a":              "Copy only the given applications and their bound services. Default is to copy all applications.",
+						"-host-format, -n":       "Format of app route's hostname to make it unique i.e. \"{{.host}}-{{.space}}\".",
+						"-domain, -m":            "Domain to use to create routes to copied apps with same hostname.",
+						"-ups, -s":               "Comma separated list of services that will be copied as user provided services in the target space.",
+						"-services-only, -o":     "Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.",
+						"-recreate-services, -r": "Recreate services",
+						"-debug, -d":             "Output debug messages.",
 					},
 				},
 			},
@@ -107,6 +111,7 @@ func (c *CopyPlugin) parseCopyOptions(args []string) (*CopyOptions, bool) {
 	f.NewStringFlag("domain", "m", "")
 	f.NewStringFlag("ups", "s", "")
 	f.NewBoolFlag("services-only", "o", "")
+	f.NewBoolFlag("recreate-services", "r", "")
 	f.NewBoolFlag("debug", "d", "")
 
 	err := f.Parse(args[i:]...)
@@ -125,6 +130,9 @@ func (c *CopyPlugin) parseCopyOptions(args []string) (*CopyOptions, bool) {
 	}
 	if f.IsSet("ups") {
 		o.CopyAsUpsServices = strings.Split(f.String("ups"), ",")
+	}
+	if f.IsSet("recreate-services") {
+		o.RecreateServices = f.Bool("recreate-services")
 	}
 	if f.IsSet("services-only") {
 		o.ServicesOnly = f.Bool("services-only")

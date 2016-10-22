@@ -40,6 +40,7 @@ type CopyOptions struct {
 	AppHostFormat     string
 	AppRouteDomain    string
 	CopyAsUpsServices []string
+	RecreateServices  bool
 	ServicesOnly      bool
 
 	Debug     bool
@@ -148,7 +149,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 		c.destCCSession.SetSessionOrg(c.destOrg)
 		c.destCCSession.SetSessionSpace(c.destSpace)
 
-		err = sm.DoCopy(sc)
+		err = sm.DoCopy(sc, o.RecreateServices)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return

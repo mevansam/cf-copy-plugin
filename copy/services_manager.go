@@ -77,10 +77,7 @@ func (sm *CfCliServicesManager) ServicesToBeCopied(
 			sc.serviceInstancesToCopy = append(sc.serviceInstancesToCopy, serviceInstance)
 
 			keyName := fmt.Sprintf(sm.serviceKeyFormat, serviceInstance.Name)
-			if serviceKey, contains := helpers.ContainsServiceKey(keyName, serviceInstance.ServiceKeys); contains {
-				sm.logger.DebugMessage("Deleting existing service key %s for service %s.", keyName, serviceInstance.Name)
-				sm.srcCCSession.ServiceKeys().DeleteServiceKey(serviceKey.GUID)
-			}
+			serviceKey, serviceKeyExists := helpers.ContainsServiceKey(keyName, serviceInstance.ServiceKeys)
 
 			if ups, contains := helpers.ContainsUserProvidedService(serviceInstance.Name, upsServices); contains &&
 				len(serviceInstance.ServicePlan.GUID) == 0 && len(serviceInstance.ServiceOffering.GUID) == 0 {
@@ -99,25 +96,35 @@ func (sm *CfCliServicesManager) ServicesToBeCopied(
 					sm.logger.DebugMessage("Managed service '%s' that will be copied as a user provided service: %# v",
 						serviceInstance.Name, serviceInstance)
 
-					sm.logger.DebugMessage(
-						"Creating service key %s for service %s to be used as source of credentials for target user-provided-service.",
-						keyName, serviceInstance.Name)
+					if !serviceKeyExists {
+						sm.logger.DebugMessage(
+							"Creating service key %s for service %s to be used as source of credentials for target user-provided-service.",
+							keyName, serviceInstance.Name)
 
-					sm.srcCCSession.ServiceKeys().CreateServiceKey(serviceInstance.GUID, keyName, make(map[string]interface{}))
+						err = sm.srcCCSession.ServiceKeys().CreateServiceKey(serviceInstance.GUID, keyName, make(map[string]interface{}))
+						if err != nil {
+							return nil, err
+						}
+					}
 
-					serviceKey, err := sm.srcCCSession.ServiceKeys().GetServiceKey(serviceInstance.GUID, keyName)
+					key, err := sm.srcCCSession.ServiceKeys().GetServiceKey(serviceInstance.GUID, keyName)
 					if err != nil {
 						return nil, err
 					}
-
-					sm.logger.DebugMessage("Service key created for copying managed service as a user provided service: %# v", serviceKey)
+					sm.logger.DebugMessage("Service key for copying managed service as a user provided service: %# v", key)
 
 					ups := models.UserProvidedService{
 						Name:        serviceInstance.Name,
-						Credentials: serviceKey.Credentials,
+						Credentials: key.Credentials,
 					}
 					sc.destUserProvidedServices = append(sc.destUserProvidedServices, ups)
+
 				} else {
+					if serviceKeyExists {
+						sm.logger.DebugMessage("Deleting service key %s for service %s that is no-longer needed.", keyName, serviceInstance.Name)
+						sm.srcCCSession.ServiceKeys().DeleteServiceKey(serviceKey.GUID)
+					}
+
 					sm.logger.DebugMessage("Managed service '%s' that will be re-created as a managed service at the destination: %# v",
 						serviceInstance.Name, serviceInstance)
 				}
@@ -130,7 +137,7 @@ func (sm *CfCliServicesManager) ServicesToBeCopied(
 }
 
 // DoCopy - Create service instance copies at destination
-func (sm *CfCliServicesManager) DoCopy(services ServiceCollection) (err error) {
+func (sm *CfCliServicesManager) DoCopy(services ServiceCollection, recreate bool) (err error) {
 
 	var (
 		ok bool
@@ -155,6 +162,11 @@ func (sm *CfCliServicesManager) DoCopy(services ServiceCollection) (err error) {
 
 		if _, contains := helpers.ContainsService(s.Name, servicesAtDest); contains {
 
+			if !recreate {
+				sm.logger.UI.Say("+ existing service %s will be reused.",
+					terminal.EntityNameColor(s.Name))
+				continue
+			}
 			serviceInstance, err = sm.destCCSession.Services().FindInstanceByName(s.Name)
 			if err != nil {
 				return
@@ -186,14 +198,8 @@ func (sm *CfCliServicesManager) DoCopy(services ServiceCollection) (err error) {
 			serviceInstance.ServiceBindings = []models.ServiceBindingFields{}
 			serviceInstance.ServiceKeys = []models.ServiceKeyFields{}
 
-			err = helpers.RetryOnError(2, 3, func() (err error) {
-				sm.logger.DebugMessage("Deleting existing service instance %s at destination.", serviceInstance.Name)
-				err = sm.destCCSession.Services().DeleteService(serviceInstance)
-				if err != nil {
-					sm.logger.DebugMessage("Unable to delete service instance: %s", err.Error())
-				}
-				return
-			})
+			sm.logger.DebugMessage("Deleting existing service instance %s at destination.", serviceInstance.Name)
+			err = sm.destCCSession.Services().DeleteService(serviceInstance)
 			if err != nil {
 				return
 			}
