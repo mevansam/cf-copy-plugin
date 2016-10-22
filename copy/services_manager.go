@@ -154,19 +154,17 @@ func (sm *CfCliServicesManager) DoCopy(services ServiceCollection, recreate bool
 	for _, s := range sc.serviceInstancesToCopy {
 
 		var (
+			serviceExists   bool
 			serviceInstance models.ServiceInstance
 			rebindAppGUIDS  []string
 			offerings       models.ServiceOfferings
 			plans           []models.ServicePlanFields
 		)
 
-		if _, contains := helpers.ContainsService(s.Name, servicesAtDest); contains {
+		if _, serviceExists = helpers.ContainsService(s.Name, servicesAtDest); serviceExists && recreate {
 
-			if !recreate {
-				sm.logger.UI.Say("+ existing service %s will be reused.",
-					terminal.EntityNameColor(s.Name))
-				continue
-			}
+			// Delete existing service instance
+
 			serviceInstance, err = sm.destCCSession.Services().FindInstanceByName(s.Name)
 			if err != nil {
 				return
@@ -204,57 +202,63 @@ func (sm *CfCliServicesManager) DoCopy(services ServiceCollection, recreate bool
 				return
 			}
 		}
-		if ups, contains := helpers.ContainsUserProvidedService(s.Name, sc.destUserProvidedServices); contains {
-
-			sm.logger.UI.Say("+ %s as a user provided service instance at destination",
+		if serviceExists && !recreate {
+			sm.logger.UI.Say("+ existing service %s will be reused.",
 				terminal.EntityNameColor(s.Name))
-
-			err = sm.destCCSession.UserProvidedServices().Create(ups.Name, "", "", ups.Credentials)
-			if err != nil {
-				return
-			}
-			sm.logger.DebugMessage("Created user provided service %s at destination.", s.Name)
-
 		} else {
-			sm.logger.UI.Say("+ %s as a managed service instance at destination",
-				terminal.EntityNameColor(s.Name))
 
-			sm.logger.DebugMessage("Debug looking up the GUID for service '%s' plan name '%s'",
-				s.ServiceOffering.Label, s.ServicePlan.Name)
+			if ups, contains := helpers.ContainsUserProvidedService(s.Name, sc.destUserProvidedServices); contains {
 
-			offerings, err = sm.destCCSession.Services().FindServiceOfferingsForSpaceByLabel(
-				sm.destCCSession.GetSessionSpace().GUID, s.ServiceOffering.Label)
-			if err != nil {
-				return
-			}
+				sm.logger.UI.Say("+ %s as a user provided service instance at destination",
+					terminal.EntityNameColor(s.Name))
 
-			servicePlanGUID := ""
-			for _, o := range offerings {
-				plans, err = sm.destCCSession.ServicePlans().Search(map[string]string{"service_guid": o.GUID})
+				err = sm.destCCSession.UserProvidedServices().Create(ups.Name, "", "", ups.Credentials)
 				if err != nil {
 					return
 				}
-				for _, p := range plans {
-					if p.Name == s.ServicePlan.Name {
-						servicePlanGUID = p.GUID
+				sm.logger.DebugMessage("Created user provided service %s at destination.", s.Name)
+
+			} else {
+				sm.logger.UI.Say("+ %s as a managed service instance at destination",
+					terminal.EntityNameColor(s.Name))
+
+				sm.logger.DebugMessage("Debug looking up the GUID for service '%s' plan name '%s'",
+					s.ServiceOffering.Label, s.ServicePlan.Name)
+
+				offerings, err = sm.destCCSession.Services().FindServiceOfferingsForSpaceByLabel(
+					sm.destCCSession.GetSessionSpace().GUID, s.ServiceOffering.Label)
+				if err != nil {
+					return
+				}
+
+				servicePlanGUID := ""
+				for _, o := range offerings {
+					plans, err = sm.destCCSession.ServicePlans().Search(map[string]string{"service_guid": o.GUID})
+					if err != nil {
+						return
+					}
+					for _, p := range plans {
+						if p.Name == s.ServicePlan.Name {
+							servicePlanGUID = p.GUID
+						}
 					}
 				}
-			}
-			if servicePlanGUID == "" {
-				err = fmt.Errorf("Unable to determine the GUID for service '%s' plan name '%s'",
-					s.ServiceOffering.Label, s.Name)
-				return
-			}
+				if servicePlanGUID == "" {
+					err = fmt.Errorf("Unable to determine the GUID for service '%s' plan name '%s'",
+						s.ServiceOffering.Label, s.Name)
+					return
+				}
 
-			sm.logger.DebugMessage("GUID for service '%s' plan name '%s' is: %s",
-				s.ServiceOffering.Label, s.Name, servicePlanGUID)
+				sm.logger.DebugMessage("GUID for service '%s' plan name '%s' is: %s",
+					s.ServiceOffering.Label, s.Name, servicePlanGUID)
 
-			err = sm.destCCSession.Services().CreateServiceInstance(s.Name,
-				servicePlanGUID, s.Params, s.Tags)
-			if err != nil {
-				return
+				err = sm.destCCSession.Services().CreateServiceInstance(s.Name,
+					servicePlanGUID, s.Params, s.Tags)
+				if err != nil {
+					return
+				}
+				sm.logger.DebugMessage("Created managed service %s at destination.", s.Name)
 			}
-			sm.logger.DebugMessage("Created managed service %s at destination.", s.Name)
 		}
 
 		serviceInstance, err = sm.destCCSession.Services().FindInstanceByName(s.Name)
