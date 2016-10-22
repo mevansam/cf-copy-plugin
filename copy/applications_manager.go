@@ -32,6 +32,7 @@ type CfCliApplicationsManager struct {
 
 // CfCliApplicationCollection -
 type CfCliApplicationCollection struct {
+	defaultDomainAtSrc models.DomainFields
 	applicationsToCopy []*appInfo
 	appInfoMap         map[string]*appInfo
 }
@@ -97,6 +98,11 @@ func (am *CfCliApplicationsManager) ApplicationsToBeCopied(
 			ac.applicationsToCopy = append(ac.applicationsToCopy, &info)
 			ac.appInfoMap[a.Name] = &info
 		}
+	}
+
+	ac.defaultDomainAtSrc, err = am.srcCCSession.Domains().FirstOrDefault(am.srcCCSession.GetSessionOrg().GUID, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	am.logger.DebugMessage("Applications to be copied => %# v", ac.applicationsToCopy)
@@ -187,22 +193,32 @@ func (am *CfCliApplicationsManager) DoCopy(
 				}
 			}
 		}
-
-		state = "started"
-		err = helpers.RetryOnError(2, 3, func() (err error) {
-			am.logger.DebugMessage("Starting application %s.", destApp.Name)
-			_, err = am.destCCSession.Applications().Update(destApp.GUID, models.AppParams{State: &state})
+		err = helpers.Retry(60000, 5000, func() (cont bool, err error) {
+			am.logger.DebugMessage("Waiting for applications bits of %s to finalize.", destApp.Name)
+			app, err := am.destCCSession.AppSummary().GetSummary(destApp.GUID)
 			if err != nil {
-				am.logger.DebugMessage("Unable to start application: %s", err.Error())
+				return false, err
 			}
-			return
+			return app.PackageState == "STAGED", nil
 		})
 
-		var domain models.DomainFields
-		if len(appRouteDomain) == 0 {
-			domain, err = am.destCCSession.Domains().FirstOrDefault(am.destCCSession.GetSessionOrg().GUID, nil)
-		} else {
-			domain, err = am.destCCSession.Domains().FirstOrDefault(am.destCCSession.GetSessionOrg().GUID, &appRouteDomain)
+		am.logger.DebugMessage("Starting application %s.", destApp.Name)
+
+		state = "started"
+		_, err = am.destCCSession.Applications().Update(destApp.GUID, models.AppParams{State: &state})
+		if err != nil {
+			return
+		}
+
+		var (
+			orgGUID               string
+			defaultDomain, domain models.DomainFields
+		)
+
+		orgGUID = am.destCCSession.GetSessionOrg().GUID
+		defaultDomain, err = am.destCCSession.Domains().FirstOrDefault(orgGUID, nil)
+		if err != nil {
+			return
 		}
 
 		for _, r := range a.srcApp.Routes {
@@ -216,6 +232,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 				appHostVars["app"] = a.srcApp.Name
 				appHostVars["host"] = r.Host
 
+				appHostResult.Truncate(0)
 				err = appHostTmpl.Execute(&appHostResult, appHostVars)
 				if err != nil {
 					return
@@ -223,6 +240,51 @@ func (am *CfCliApplicationsManager) DoCopy(
 				host = appHostResult.String()
 			} else {
 				host = r.Host
+			}
+
+			if len(appRouteDomain) == 0 {
+
+				// If route is on the default domain at source then create it on the
+				// default domain at destination. Otherwise attempt to determine
+				// the domain based on the first level of the source route's domain.
+
+				domain = defaultDomain
+				if r.Domain.Name != ac.defaultDomainAtSrc.Name {
+					found := false
+					srcDomainParts := strings.Split(r.Domain.Name, ".")
+					err = am.destCCSession.Domains().ListDomainsForOrg(orgGUID, func(d models.DomainFields) bool {
+						destDomainParts := strings.Split(d.Name, ".")
+						if srcDomainParts[0] == destDomainParts[0] {
+							domain = d
+							found = true
+						}
+						return found
+					})
+					if err != nil {
+						return
+					}
+					if !found {
+						am.logger.UI.Say(
+							"- unable to create dest route to match source route %s",
+							terminal.WarningColor(r.URL()))
+						continue
+					}
+				}
+
+			} else {
+				domain, err = am.destCCSession.Domains().FirstOrDefault(orgGUID, &appRouteDomain)
+			}
+
+			route, err = am.destCCSession.Routes().Find(host, domain, "", 0)
+			if err != nil {
+				if _, ok := err.(*errors.ModelNotFoundError); !ok {
+					return
+				}
+			} else {
+				err = am.destCCSession.Routes().Delete(route.GUID)
+				if err != nil {
+					return
+				}
 			}
 			route, err = am.destCCSession.Routes().Create(host, domain, "", 0, false)
 			if err != nil {

@@ -59,15 +59,19 @@ func ContainsServiceKey(name string, serviceKeys []models.ServiceKeyFields) (*mo
 	return nil, false
 }
 
-// RetryOnError -
-func RetryOnError(wait time.Duration, count int, callback func() error) (err error) {
-	for i := count; i > 0; i-- {
-		err = callback()
-		if err == nil {
+// Retry -
+func Retry(timeout time.Duration, poll time.Duration, callback func() (bool, error)) (err error) {
+
+	var done bool
+
+	timeoutAt := time.Now().Add(timeout * time.Millisecond)
+	wait := poll * time.Millisecond
+
+	for time.Now().Before(timeoutAt) {
+		if done, err = callback(); done || err != nil {
 			return
 		}
-		time.Sleep(wait * time.Second)
-		wait *= 2
+		time.Sleep(wait)
 	}
 	return
 }

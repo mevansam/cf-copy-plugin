@@ -181,7 +181,7 @@ func (s *CfCliSession) UploadDroplet(appGUID string, contentType string, droplet
 
 	response := make(map[string]interface{})
 	_, err = s.ccGateway.PerformRequestForJSONResponse(request, &response)
-	s.logger.DebugMessage("Response from droplet upload: #% v", response)
+	s.logger.DebugMessage("Response from droplet upload: %# v", response)
 
 	return err
 }
