@@ -40,6 +40,7 @@ func NewCfCliApplicationsManager(
 		return nil, err
 	}
 	downloadPath := filepath.Join(filepath.Dir(cliConfigPath), "appcontent")
+	os.RemoveAll(downloadPath)
 	os.MkdirAll(downloadPath, os.ModePerm)
 
 	return &CfCliApplicationsManager{
@@ -176,19 +177,19 @@ func (am *CfCliApplicationsManager) DoCopy(
 				}
 			}
 		}
-		err = helpers.Retry(60000, 5000, func() (cont bool, err error) {
-			am.logger.DebugMessage("Waiting for applications bits of %s to finalize.", destApp.Name)
-			app, err := am.destCCSession.AppSummary().GetSummary(destApp.GUID)
-			if err != nil {
-				return false, err
-			}
-			return app.PackageState == "STAGED", nil
-		})
-
-		am.logger.DebugMessage("Starting application %s.", destApp.Name)
 
 		state = "started"
-		_, err = am.destCCSession.Applications().Update(destApp.GUID, models.AppParams{State: &state})
+		params = models.AppParams{State: &state}
+
+		err = helpers.Retry(300000, 5000, func() (bool, error) {
+			am.logger.DebugMessage("Starting application %s.", destApp.Name)
+			_, err = am.destCCSession.Applications().Update(destApp.GUID, models.AppParams{State: &state})
+			if err != nil {
+				am.logger.DebugMessage("Request to start application %s returned error: %s.", destApp.Name, err.Error())
+				return false, err
+			}
+			return true, nil
+		})
 		if err != nil {
 			return
 		}
@@ -233,15 +234,21 @@ func (am *CfCliApplicationsManager) DoCopy(
 
 				domain = defaultDomain
 				if r.Domain.Name != ac.defaultDomainAtSrc.Name {
+
 					found := false
 					srcDomainParts := strings.Split(r.Domain.Name, ".")
+					am.logger.DebugMessage("Searching for match for source domain: %+v", srcDomainParts)
+
 					err = am.destCCSession.Domains().ListDomainsForOrg(orgGUID, func(d models.DomainFields) bool {
+
 						destDomainParts := strings.Split(d.Name, ".")
+						am.logger.DebugMessage("Attempting to match dest domain: %+v", destDomainParts)
+
 						if srcDomainParts[0] == destDomainParts[0] {
 							domain = d
 							found = true
 						}
-						return found
+						return !found
 					})
 					if err != nil {
 						return
@@ -252,6 +259,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 							terminal.WarningColor(r.URL()))
 						continue
 					}
+					am.logger.DebugMessage("Found matching dest domain: %# v", domain)
 				}
 
 			} else {
