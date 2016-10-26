@@ -39,6 +39,7 @@ type CopyOptions struct {
 	SourceAppNames    []string
 	AppHostFormat     string
 	AppRouteDomain    string
+	CopyAsDroplet     bool
 	CopyAsUpsServices []string
 	RecreateServices  bool
 	ServicesOnly      bool
@@ -118,7 +119,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			defer c.srcCCSession.SetSessionSpace(c.srcSpace)
 		}
 
-		am, err = copy.NewCfCliApplicationsManager(c.srcCCSession, c.destCCSession, cli, c.logger)
+		am, err = copy.NewCfCliApplicationsManager(c.srcCCSession, c.destCCSession, c.logger)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return
@@ -132,8 +133,8 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 		}
 		defer sm.Close()
 
-		if !c.o.ServicesOnly {
-			ac, err = am.ApplicationsToBeCopied(o.SourceAppNames)
+		if !o.ServicesOnly {
+			ac, err = am.ApplicationsToBeCopied(o.SourceAppNames, o.CopyAsDroplet)
 			if err != nil {
 				c.logger.UI.Failed(err.Error())
 				return
@@ -155,7 +156,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			return
 		}
 
-		if !c.o.ServicesOnly {
+		if !o.ServicesOnly {
 			err = am.DoCopy(ac, sc, o.AppHostFormat, o.AppRouteDomain)
 			if err != nil {
 				c.logger.UI.Failed(err.Error())
@@ -223,9 +224,9 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 
 		// Initialize and validate source and destination sessions
 		c.srcCCSession = c.sessionProvider.NewCloudControllerSessionFromFilepath(
-			c.targets.GetTargetConfigPath(currentTarget), c.logger)
+			c.cli, c.targets.GetTargetConfigPath(currentTarget), c.logger)
 		c.destCCSession = c.sessionProvider.NewCloudControllerSessionFromFilepath(
-			c.targets.GetTargetConfigPath(c.o.DestTarget), c.logger)
+			c.cli, c.targets.GetTargetConfigPath(c.o.DestTarget), c.logger)
 
 		if !c.srcCCSession.HasTarget() {
 			c.logger.UI.Failed("The CLI target org and space needs to be set.")

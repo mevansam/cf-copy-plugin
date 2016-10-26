@@ -35,8 +35,8 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 		Name: "CopyPlugin",
 		Version: plugin.VersionType{
 			Major: 0,
-			Minor: 0,
-			Build: 2,
+			Minor: 1,
+			Build: 0,
 		},
 		Commands: []plugin.Command{
 			{
@@ -44,13 +44,14 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 				HelpText: "Copy current space artifacts to another space. Uses targets saved by 'Targets' plugin when copying to another Cloud Foundry target.",
 				UsageDetails: plugin.Usage{
 					Usage: "cf copy DEST_SPACE [DEST_ORG] [DEST_TARGET] " +
-						"[--apps|-a APPLICATIONS] [--host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] " +
+						"[--apps|-a APPLICATIONS] [--host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] [--droplet] " +
 						"[--ups|-s COPY_AS_UPS] [--services-only|-o] [--recreate-services|-r]" +
 						"[-debug|-d]",
 					Options: map[string]string{
 						"-apps, -a":              "Copy only the given applications and their bound services. Default is to copy all applications.",
 						"-host-format, -n":       "Format of app route's hostname to make it unique i.e. \"{{.host}}-{{.space}}\".",
 						"-domain, -m":            "Domain to use to create routes to copied apps with same hostname.",
+						"-droplet, -c":           "Application droplet will be copied to the destination as is. Otherwise, the application bits will be re-pushed.",
 						"-ups, -s":               "Comma separated list of services that will be copied as user provided services in the target space.",
 						"-services-only, -o":     "Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.",
 						"-recreate-services, -r": "Recreate services",
@@ -109,6 +110,7 @@ func (c *CopyPlugin) parseCopyOptions(args []string) (*CopyOptions, bool) {
 	f.NewStringFlag("apps", "a", "")
 	f.NewStringFlag("host-format", "n", "")
 	f.NewStringFlag("domain", "m", "")
+	f.NewBoolFlag("droplet", "c", "")
 	f.NewStringFlag("ups", "s", "")
 	f.NewBoolFlag("services-only", "o", "")
 	f.NewBoolFlag("recreate-services", "r", "")
@@ -127,6 +129,9 @@ func (c *CopyPlugin) parseCopyOptions(args []string) (*CopyOptions, bool) {
 	}
 	if f.IsSet("domain") {
 		o.AppRouteDomain = f.String("domain")
+	}
+	if f.IsSet("droplet") {
+		o.CopyAsDroplet = f.Bool("droplet")
 	}
 	if f.IsSet("ups") {
 		o.CopyAsUpsServices = strings.Split(f.String("ups"), ",")

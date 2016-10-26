@@ -1,20 +1,28 @@
 package helpers
 
 import (
+	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"time"
 
+	"github.com/mitchellh/ioprogress"
+
 	"code.cloudfoundry.org/cli/cf/api"
+	"code.cloudfoundry.org/cli/cf/api/applicationbits"
 	"code.cloudfoundry.org/cli/cf/api/applications"
 	"code.cloudfoundry.org/cli/cf/api/authentication"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
 	"code.cloudfoundry.org/cli/cf/api/spaces"
 	"code.cloudfoundry.org/cli/cf/api/strategy"
 	"code.cloudfoundry.org/cli/cf/configuration/coreconfig"
+	"code.cloudfoundry.org/cli/cf/errors"
 	"code.cloudfoundry.org/cli/cf/i18n"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/net"
+	"code.cloudfoundry.org/cli/plugin"
 )
 
 // CfCliSessionProvider -
@@ -28,6 +36,8 @@ type CfCliSession struct {
 	ccGateway  net.Gateway
 	uaaGateway net.Gateway
 
+	httpClient *http.Client
+
 	uaa authentication.UAARepository
 }
 
@@ -37,9 +47,21 @@ func NewCfCliSessionProvider() CloudCountrollerSessionProvider {
 }
 
 // NewCloudControllerSessionFromFilepath -
-func (p *CfCliSessionProvider) NewCloudControllerSessionFromFilepath(configPath string, logger *Logger) CloudControllerSession {
+func (p *CfCliSessionProvider) NewCloudControllerSessionFromFilepath(
+	cli plugin.CliConnection,
+	configPath string,
+	logger *Logger) CloudControllerSession {
 
-	session := &CfCliSession{logger: logger}
+	sslDisabled, _ := cli.IsSSLDisabled()
+
+	session := &CfCliSession{
+		logger: logger,
+		httpClient: &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: sslDisabled},
+			},
+		},
+	}
 
 	session.config = coreconfig.NewRepositoryFromFilepath(configPath, func(err error) {
 		if err != nil {
@@ -148,6 +170,11 @@ func (s *CfCliSession) Applications() applications.Repository {
 	return applications.NewCloudControllerRepository(s.config, s.ccGateway)
 }
 
+// ApplicationBits -
+func (s *CfCliSession) ApplicationBits() applicationbits.Repository {
+	return applicationbits.NewCloudControllerApplicationBitsRepository(s.config, s.ccGateway)
+}
+
 // Routes -
 func (s *CfCliSession) Routes() api.RouteRepository {
 	return api.NewCloudControllerRouteRepository(s.config, s.ccGateway)
@@ -169,19 +196,101 @@ func (s *CfCliSession) GetServiceCredentials(serviceBinding models.ServiceBindin
 	return serviceBindingDetail, nil
 }
 
+// DownloadAppContent -
+func (s *CfCliSession) DownloadAppContent(appGUID string, outputFile *os.File, asDroplet bool) (err error) {
+
+	var url string
+	if asDroplet {
+		url = fmt.Sprintf("%s/v2/apps/%s/droplet/download", s.config.APIEndpoint(), appGUID)
+	} else {
+		url = fmt.Sprintf("%s/v2/apps/%s/download", s.config.APIEndpoint(), appGUID)
+	}
+	request, err := s.ccGateway.NewRequest("GET", url, s.config.AccessToken(), nil)
+	if err != nil {
+		return
+	}
+
+	response, err := s.httpClient.Do(request.HTTPReq)
+	if err != nil {
+		if _, ok := err.(*errors.InvalidTokenError); !ok {
+			// Handle token refresh error
+			var newToken string
+			newToken, err = s.uaa.RefreshAuthToken()
+			if err == nil {
+				request.HTTPReq.Header.Set("Authorization", newToken)
+				response, err = s.httpClient.Do(request.HTTPReq)
+			}
+		}
+		if err != nil {
+			return
+		}
+	}
+	defer response.Body.Close()
+	progressReader := &ioprogress.Reader{
+		Reader:   response.Body,
+		Size:     response.ContentLength,
+		DrawFunc: ioprogress.DrawTerminalf(os.Stdout, drawProgressBar()),
+	}
+	_, err = io.Copy(outputFile, progressReader)
+	return
+}
+
 // UploadDroplet -
 func (s *CfCliSession) UploadDroplet(appGUID string, contentType string, dropletUploadRequest *os.File) error {
 
+	fileStats, err := dropletUploadRequest.Stat()
+	if err != nil {
+		return err
+	}
+	fileSize := fileStats.Size()
+
+	progressReader := readSeekerWrapper{
+		seeker: dropletUploadRequest,
+		reader: &ioprogress.Reader{
+			Reader:   dropletUploadRequest,
+			Size:     fileSize,
+			DrawFunc: ioprogress.DrawTerminalf(os.Stdout, drawProgressBar()),
+		},
+	}
+	_, _ = progressReader.Seek(0, 0)
+
 	url := fmt.Sprintf("%s/v2/apps/%s/droplet/upload", s.config.APIEndpoint(), appGUID)
-	request, err := s.ccGateway.NewRequestForFile("PUT", url, s.config.AccessToken(), dropletUploadRequest)
+	request, err := s.ccGateway.NewRequest("PUT", url, s.config.AccessToken(), progressReader)
 	if err != nil {
 		return err
 	}
 	request.HTTPReq.Header.Set("Content-Type", contentType)
+	request.HTTPReq.ContentLength = fileSize
 
 	response := make(map[string]interface{})
 	_, err = s.ccGateway.PerformRequestForJSONResponse(request, &response)
 	s.logger.DebugMessage("Response from droplet upload: %# v", response)
 
 	return err
+}
+
+// drawProgressBar -
+func drawProgressBar() ioprogress.DrawTextFormatFunc {
+
+	bar := ioprogress.DrawTextFormatBar(60)
+	return func(progress, total int64) string {
+		return fmt.Sprintf(
+			"  %s %s",
+			bar(progress, total),
+			ioprogress.DrawTextFormatBytes(progress, total))
+	}
+}
+
+// readSeakerWrapper -
+type readSeekerWrapper struct {
+	seeker io.ReadSeeker
+	reader io.Reader
+}
+
+func (r readSeekerWrapper) Read(p []byte) (int, error) {
+	return r.reader.Read(p)
+}
+
+func (r readSeekerWrapper) Seek(offset int64, whence int) (next int64, err error) {
+	return r.seeker.Seek(offset, whence)
 }

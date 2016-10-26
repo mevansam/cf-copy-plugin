@@ -4,10 +4,12 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/cli/cf/api"
+	"code.cloudfoundry.org/cli/cf/api/applicationbits"
 	"code.cloudfoundry.org/cli/cf/api/applications"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
 	"code.cloudfoundry.org/cli/cf/api/spaces"
 	"code.cloudfoundry.org/cli/cf/models"
+	"code.cloudfoundry.org/cli/plugin"
 	"github.com/mevansam/cf-copy-plugin/helpers"
 )
 
@@ -29,15 +31,21 @@ type MockSession struct {
 	MockServiceBindings      func() api.ServiceBindingRepository
 	MockAppSummary           func() api.AppSummaryRepository
 	MockApplications         func() applications.Repository
+	MockApplicationBits      func() applicationbits.Repository
 	MockRoutes               func() api.RouteRepository
 	MockDomains              func() api.DomainRepository
 
 	MockGetServiceCredentials func(models.ServiceBindingFields) (*helpers.ServiceBindingDetail, error)
+	MockDownloadAppContent    func(string, *os.File, bool) error
 	MockUploadDroplet         func(string, string, *os.File) error
 }
 
 // NewCloudControllerSessionFromFilepath -
-func (m *MockSession) NewCloudControllerSessionFromFilepath(configPath string, logger *helpers.Logger) helpers.CloudControllerSession {
+func (m *MockSession) NewCloudControllerSessionFromFilepath(
+	cli plugin.CliConnection,
+	configPath string,
+	logger *helpers.Logger) helpers.CloudControllerSession {
+
 	return m
 }
 
@@ -120,6 +128,11 @@ func (m *MockSession) Applications() applications.Repository {
 	return m.MockApplications()
 }
 
+// ApplicationBits -
+func (m *MockSession) ApplicationBits() applicationbits.Repository {
+	return m.MockApplicationBits()
+}
+
 // Routes -
 func (m *MockSession) Routes() api.RouteRepository {
 	return m.MockRoutes()
@@ -138,6 +151,11 @@ func (m *MockSession) ServiceBindings() api.ServiceBindingRepository {
 // GetServiceCredentials -
 func (m *MockSession) GetServiceCredentials(serviceBinding models.ServiceBindingFields) (*helpers.ServiceBindingDetail, error) {
 	return m.MockGetServiceCredentials(serviceBinding)
+}
+
+// DownloadAppContent -
+func (m *MockSession) DownloadAppContent(appGUID string, outputFile *os.File, asDroplet bool) error {
+	return m.MockDownloadAppContent(appGUID, outputFile, asDroplet)
 }
 
 // UploadDroplet -

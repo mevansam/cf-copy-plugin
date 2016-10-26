@@ -4,15 +4,17 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/cli/cf/api"
+	"code.cloudfoundry.org/cli/cf/api/applicationbits"
 	"code.cloudfoundry.org/cli/cf/api/applications"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
 	"code.cloudfoundry.org/cli/cf/api/spaces"
 	"code.cloudfoundry.org/cli/cf/models"
+	"code.cloudfoundry.org/cli/plugin"
 )
 
 // CloudCountrollerSessionProvider -
 type CloudCountrollerSessionProvider interface {
-	NewCloudControllerSessionFromFilepath(configPath string, logger *Logger) CloudControllerSession
+	NewCloudControllerSessionFromFilepath(cli plugin.CliConnection, configPath string, logger *Logger) CloudControllerSession
 }
 
 // CloudControllerSession -
@@ -41,11 +43,14 @@ type CloudControllerSession interface {
 
 	AppSummary() api.AppSummaryRepository
 	Applications() applications.Repository
+	ApplicationBits() applicationbits.Repository
 	Routes() api.RouteRepository
 	Domains() api.DomainRepository
 
 	GetServiceCredentials(models.ServiceBindingFields) (*ServiceBindingDetail, error)
-	UploadDroplet(string, string, *os.File) error
+
+	DownloadAppContent(ppGUID string, outputFile *os.File, asDroplet bool) error
+	UploadDroplet(appGUID string, contentType string, dropletUploadRequest *os.File) error
 }
 
 // Model structs not present in CF CLI API

@@ -3,9 +3,6 @@ package copy
 import (
 	"bytes"
 	"html/template"
-	"io"
-	"io/ioutil"
-	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,8 +11,6 @@ import (
 	"code.cloudfoundry.org/cli/cf/errors"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/terminal"
-	"code.cloudfoundry.org/cli/plugin"
-	"github.com/krujos/download_droplet_plugin/droplet"
 	"github.com/mevansam/cf-copy-plugin/helpers"
 )
 
@@ -23,61 +18,46 @@ import (
 type CfCliApplicationsManager struct {
 	srcCCSession  helpers.CloudControllerSession
 	destCCSession helpers.CloudControllerSession
-
-	dropletDownloader   droplet.Droplet
-	dropletDownloadPath string
-
-	logger *helpers.Logger
+	downloadPath  string
+	logger        *helpers.Logger
 }
 
 // CfCliApplicationCollection -
 type CfCliApplicationCollection struct {
 	defaultDomainAtSrc models.DomainFields
-	applicationsToCopy []*appInfo
-	appInfoMap         map[string]*appInfo
-}
-
-// appInfo
-type appInfo struct {
-	srcApp       models.Application
-	dropletPath  string
-	bindServices []string
+	applicationsToCopy []*Application
+	appInfoMap         map[string]*Application
 }
 
 // NewCfCliApplicationsManager -
 func NewCfCliApplicationsManager(
 	srcCCSession helpers.CloudControllerSession,
 	destCCSession helpers.CloudControllerSession,
-	cli plugin.CliConnection,
 	logger *helpers.Logger) (ApplicationsManager, error) {
 
 	cliConfigPath, err := confighelpers.DefaultFilePath()
 	if err != nil {
 		return nil, err
 	}
-	dropletDownloadPath := filepath.Join(filepath.Dir(cliConfigPath), "droplets")
-	dropletDownloader := droplet.NewCFDroplet(cli, &droplet.CFDownloader{
-		Cli:    cli,
-		Writer: new(droplet.CFFileWriter),
-	})
+	downloadPath := filepath.Join(filepath.Dir(cliConfigPath), "appcontent")
+	os.MkdirAll(downloadPath, os.ModePerm)
 
 	return &CfCliApplicationsManager{
-		srcCCSession:        srcCCSession,
-		destCCSession:       destCCSession,
-		dropletDownloader:   dropletDownloader,
-		dropletDownloadPath: dropletDownloadPath,
-		logger:              logger,
+		srcCCSession:  srcCCSession,
+		destCCSession: destCCSession,
+		downloadPath:  downloadPath,
+		logger:        logger,
 	}, nil
 }
 
 // ApplicationsToBeCopied - Retrieve applications to copied
 func (am *CfCliApplicationsManager) ApplicationsToBeCopied(
-	appNames []string) (ApplicationCollection, error) {
+	appNames []string, copyAsDroplet bool) (ApplicationCollection, error) {
 
-	am.logger.UI.Say("\nDownloading droplets of applications that will be copied...")
+	am.logger.UI.Say("\nDownloading applications to be copied...")
 
 	ac := &CfCliApplicationCollection{
-		appInfoMap: make(map[string]*appInfo),
+		appInfoMap: make(map[string]*Application),
 	}
 
 	apps, err := am.srcCCSession.AppSummary().GetSummariesInCurrentSpace()
@@ -90,13 +70,16 @@ func (am *CfCliApplicationsManager) ApplicationsToBeCopied(
 			if err != nil {
 				return nil, err
 			}
-			info := appInfo{
-				srcApp:       *a,
-				dropletPath:  am.downloadDroplet(n),
-				bindServices: []string{},
+
+			am.logger.UI.Say("+ downloading application %s", terminal.EntityNameColor(a.Name))
+
+			app := NewApplication(a, am.downloadPath, copyAsDroplet)
+			err = app.Content.Download(am.srcCCSession)
+			if err != nil {
+				return nil, err
 			}
-			ac.applicationsToCopy = append(ac.applicationsToCopy, &info)
-			ac.appInfoMap[a.Name] = &info
+			ac.applicationsToCopy = append(ac.applicationsToCopy, app)
+			ac.appInfoMap[a.Name] = app
 		}
 	}
 
@@ -176,10 +159,10 @@ func (am *CfCliApplicationsManager) DoCopy(
 		}
 
 		am.logger.DebugMessage(
-			"Uploading droplet of applcation %s at %s using params: %# v",
-			destApp.Name, a.dropletPath, params)
+			"Uploading application %s using params: %# v",
+			params.Name, params)
 
-		destApp, err = am.uploadDroplet(params, a.dropletPath)
+		destApp, err = a.Content.Upload(am.destCCSession, params)
 		if err != nil {
 			return
 		}
@@ -265,7 +248,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 					}
 					if !found {
 						am.logger.UI.Say(
-							"- unable to create dest route to match source route %s",
+							"  unable to create dest route to match source route %s",
 							terminal.WarningColor(r.URL()))
 						continue
 					}
@@ -291,7 +274,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 				return
 			}
 			am.destCCSession.Routes().Bind(route.GUID, destApp.GUID)
-			am.logger.UI.Say("- bound route %s", terminal.HeaderColor(route.URL()))
+			am.logger.UI.Say("  bound route %s", terminal.HeaderColor(route.URL()))
 		}
 	}
 	return
@@ -299,57 +282,5 @@ func (am *CfCliApplicationsManager) DoCopy(
 
 // Close -
 func (am *CfCliApplicationsManager) Close() {
-	os.RemoveAll(am.dropletDownloadPath)
-}
-
-func (am *CfCliApplicationsManager) downloadDroplet(app string) string {
-
-	// Download application droplet
-	am.logger.UI.Say("+ downloading droplet for application %s", terminal.EntityNameColor(app))
-
-	dropletAppPath := filepath.Join(filepath.Join(am.dropletDownloadPath, app), app) + ".tgz"
-	am.logger.DebugMessage("Downloading droplet '%s'.", dropletAppPath)
-
-	os.MkdirAll(filepath.Dir(dropletAppPath), os.ModePerm)
-	am.dropletDownloader.SaveDroplet(app, dropletAppPath)
-	return dropletAppPath
-}
-
-func (am *CfCliApplicationsManager) uploadDroplet(params models.AppParams, dropletPath string) (app models.Application, err error) {
-
-	app, err = am.destCCSession.Applications().Create(params)
-	if err != nil {
-		return
-	}
-
-	dropletUploadRequest, err := ioutil.TempFile("", ".droplet")
-	if err != nil {
-		return
-	}
-	file, err := os.Open(dropletPath)
-	if err != nil {
-		return
-	}
-	defer func() {
-		file.Close()
-		dropletUploadRequest.Close()
-		os.Remove(dropletUploadRequest.Name())
-	}()
-
-	writer := multipart.NewWriter(dropletUploadRequest)
-	part, err := writer.CreateFormFile("droplet", filepath.Base(dropletPath))
-	if err != nil {
-		return
-	}
-	_, err = io.Copy(part, file)
-	if err != nil {
-		return
-	}
-	err = writer.Close()
-	if err != nil {
-		return
-	}
-
-	am.destCCSession.UploadDroplet(app.GUID, writer.FormDataContentType(), dropletUploadRequest)
-	return
+	os.RemoveAll(am.downloadPath)
 }

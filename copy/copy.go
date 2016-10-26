@@ -7,7 +7,7 @@ import (
 
 // ApplicationsManager -
 type ApplicationsManager interface {
-	ApplicationsToBeCopied(appNames []string) (ApplicationCollection, error)
+	ApplicationsToBeCopied(appNames []string, copyAsDroplet bool) (ApplicationCollection, error)
 	DoCopy(applications ApplicationCollection, services ServiceCollection, appHostFormat string, appRouteDomain string) error
 	Close()
 }
@@ -30,12 +30,12 @@ type ServiceCollection interface {
 
 // ApplicationContentProvider -
 type ApplicationContentProvider interface {
-	NewApplicationDroplet(session helpers.CloudControllerSession) ApplicationContent
-	NewApplicationBits(session helpers.CloudControllerSession) ApplicationContent
+	NewApplicationDroplet(downloadPath string) ApplicationContent
+	NewApplicationBits(downloadPath string) ApplicationContent
 }
 
 // ApplicationContent -
 type ApplicationContent interface {
-	Download(app models.Application) error
-	Upload(params models.AppParams) error
+	Download(session helpers.CloudControllerSession) error
+	Upload(session helpers.CloudControllerSession, params models.AppParams) (models.Application, error)
 }
