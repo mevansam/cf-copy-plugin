@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"fmt"
 	"time"
 
 	"code.cloudfoundry.org/cli/cf/models"
@@ -60,7 +61,7 @@ func ContainsServiceKey(name string, serviceKeys []models.ServiceKeyFields) (*mo
 }
 
 // Retry -
-func Retry(timeout time.Duration, poll time.Duration, callback func() (bool, error)) (err error) {
+func Retry(timeout time.Duration, poll time.Duration, callback func() (done bool, err error)) (err error) {
 
 	var done bool
 
@@ -68,10 +69,13 @@ func Retry(timeout time.Duration, poll time.Duration, callback func() (bool, err
 	wait := poll * time.Millisecond
 
 	for time.Now().Before(timeoutAt) {
-		if done, err = callback(); done || err != nil {
+		if done, err = callback(); done {
 			return
 		}
 		time.Sleep(wait)
+	}
+	if err == nil && time.Now().After(timeoutAt) {
+		err = fmt.Errorf("Last operation timed out.")
 	}
 	return
 }
