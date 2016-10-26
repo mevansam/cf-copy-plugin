@@ -50,11 +50,11 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 					Options: map[string]string{
 						"-apps, -a":              "Copy only the given applications and their bound services. Default is to copy all applications.",
 						"-host-format, -n":       "Format of app route's hostname to make it unique i.e. \"{{.host}}-{{.space}}\".",
-						"-domain, -m":            "Domain to use to create routes to copied apps with same hostname.",
+						"-domain, -m":            "Domain to use to create routes for copied apps with same hostname.",
 						"-droplet, -c":           "Application droplet will be copied to the destination as is. Otherwise, the application bits will be re-pushed.",
 						"-ups, -s":               "Comma separated list of services that will be copied as user provided services in the target space.",
 						"-services-only, -o":     "Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.",
-						"-recreate-services, -r": "Recreate services",
+						"-recreate-services, -r": "Recreates services at destination.",
 						"-debug, -d":             "Output debug messages.",
 					},
 				},

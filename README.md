@@ -13,15 +13,17 @@ NAME:
    copy - Copy current space artifacts to another space. Uses targets saved by 'Targets' plugin when copying to another Cloud Foundry target.
 
 USAGE:
-   cf copy DEST_SPACE [DEST_ORG] [DEST_TARGET] [--apps|-a APPLICATIONS] [---host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] [--ups|-s COPY_AS_UPS] [--services-only]
+   cf copy DEST_SPACE [DEST_ORG] [DEST_TARGET] [--apps|-a APPLICATIONS] [--host-format|-n HOST_FORMAT] [--domain|-d DOMAIN] [--droplet] [--ups|-s COPY_AS_UPS] [--services-only|-o] [--recreate-services|-r][-debug|-d]
 
 OPTIONS:
-   --debug, -d               Output debug messages.
-   --domain, -m              Domain to use to create routes to copied apps with same hostname.
-   --host-format, -n         Format of app route's hostname i.e. "{{.hostname}}-{{.space}}".
-   --services-only, -o       Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.
-   --ups, -s                 Comma separated list of services that will be copied as user provided services in the target space.
-   --apps, -a                Copy only the given applications and their bound services. Default is to copy all applications.
+   --apps, -a                    Copy only the given applications and their bound services. Default is to copy all applications.
+   --host-format, -n             Format of app route's hostname to make it unique i.e. "{{.host}}-{{.space}}".
+   --domain, -m                  Domain to use to create routes for copied apps with same hostname.
+   --droplet, -c                 Application droplet will be copied to the destination as is. Otherwise, the application bits will be re-pushed.
+   --ups, -s                     Comma separated list of services that will be copied as user provided services in the target space.
+   --recreate-services, -r       Recreates services at destination.
+   --services-only, -o           Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.
+   --debug, -d                   Output debug messages.
 ```
 
 # Installation
