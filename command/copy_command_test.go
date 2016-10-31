@@ -3,15 +3,16 @@ package command_test
 import (
 	"strings"
 
+	"code.cloudfoundry.org/cli/cf/api"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
-	"code.cloudfoundry.org/cli/cf/api/organizations/organizationsfakes"
 	"code.cloudfoundry.org/cli/cf/api/spaces"
-	"code.cloudfoundry.org/cli/cf/api/spaces/spacesfakes"
 	"code.cloudfoundry.org/cli/cf/models"
 	. "code.cloudfoundry.org/cli/testhelpers/io"
 	. "github.com/cloudfoundry/cli/plugin/pluginfakes"
 	. "github.com/mevansam/cf-copy-plugin/command"
 	. "github.com/mevansam/cf-copy-plugin/command/mocks"
+	. "github.com/mevansam/cf-copy-plugin/copy/mocks"
+	"github.com/mevansam/cf-copy-plugin/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -19,14 +20,19 @@ import (
 var _ = Describe("Copy Command Tests", func() {
 
 	var (
-		fakeCliConnection *FakeCliConnection
-		mockTargets       *MockTargets
-		mockSession       *MockSession
-		copyCommand       CopyCmd
+		fakeCliConnection       *FakeCliConnection
+		mockTargets             *MockTargets
+		mockSessionProvider     *MockSessionProvider
+		mockSrcSession          *MockSession
+		mockDestSession         *MockSession
+		mockApplicationsManager *MockApplicationsManager
+		mockServicesManager     *MockServicesManager
+		copyCommand             CopyCmd
 	)
 
 	BeforeEach(func() {
 		fakeCliConnection = &FakeCliConnection{}
+
 		mockTargets = &MockTargets{
 			CurrentTarget: "fake_source_target",
 			Targets: map[string]string{
@@ -34,8 +40,17 @@ var _ = Describe("Copy Command Tests", func() {
 				"fake_dest_target":   "/fake/dest/target.json",
 			},
 		}
-		mockSession = &MockSession{}
-		copyCommand = NewCopyCommand(mockTargets, mockSession)
+
+		mockSrcSession = &MockSession{}
+		mockDestSession = &MockSession{}
+
+		mockSessionProvider = &MockSessionProvider{make(map[string]helpers.CloudControllerSession)}
+		mockSessionProvider.MockSessionMap["/fake/source/target.json"] = mockSrcSession
+		mockSessionProvider.MockSessionMap["/fake/dest/target.json"] = mockDestSession
+
+		mockApplicationsManager = &MockApplicationsManager{}
+		mockServicesManager = &MockServicesManager{}
+		copyCommand = NewCopyCommand(mockTargets, mockSessionProvider, mockApplicationsManager, mockServicesManager)
 	})
 
 	Context("Test initialization", func() {
@@ -69,7 +84,7 @@ var _ = Describe("Copy Command Tests", func() {
 			fakeCliConnection.CliCommandWithoutTerminalOutputStub = func(args ...string) ([]string, error) {
 				return strings.Split(cf_plugins_out_2, "\n"), nil
 			}
-			mockSession.MockHasTarget = func() bool { return false }
+			mockSrcSession.MockHasTarget = func() bool { return false }
 			output := CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
 					DestSpace:      "fake_dest_space",
@@ -85,9 +100,9 @@ var _ = Describe("Copy Command Tests", func() {
 			fakeCliConnection.CliCommandWithoutTerminalOutputStub = func(args ...string) ([]string, error) {
 				return strings.Split(cf_plugins_out_2, "\n"), nil
 			}
-			mockSession.MockHasTarget = func() bool { return true }
-			mockSession.MockGetSessionOrg = func() models.OrganizationFields { return models.OrganizationFields{Name: "fake_dest_org"} }
-			mockSession.MockGetSessionSpace = func() models.SpaceFields { return models.SpaceFields{Name: "fake_dest_space"} }
+			mockSrcSession.MockHasTarget = func() bool { return true }
+			mockSrcSession.MockGetSessionOrg = func() models.OrganizationFields { return models.OrganizationFields{Name: "fake_dest_org"} }
+			mockSrcSession.MockGetSessionSpace = func() models.SpaceFields { return models.SpaceFields{Name: "fake_dest_space"} }
 			output := CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
 					DestSpace:      "fake_dest_space",
@@ -98,48 +113,67 @@ var _ = Describe("Copy Command Tests", func() {
 			Expect(output[0]).To(Equal("FAILED"))
 			Expect(output[1]).To(Equal("The source and destination are the same."))
 		})
-		It("Should set the target org and space", func() {
+	})
+
+	Context("Test copy", func() {
+
+		BeforeEach(func() {
 			fakeCliConnection.CliCommandWithoutTerminalOutputStub = func(args ...string) ([]string, error) {
 				return strings.Split(cf_plugins_out_2, "\n"), nil
 			}
-			mockSession.MockHasTarget = func() bool { return true }
-			mockSession.MockGetSessionOrg = func() models.OrganizationFields { return models.OrganizationFields{Name: "fake_src_org"} }
-			mockSession.MockGetSessionSpace = func() models.SpaceFields { return models.SpaceFields{Name: "fake_src_space"} }
-			mockSession.MockOrganizations = func() organizations.OrganizationRepository {
-				orgRepo := organizationsfakes.FakeOrganizationRepository{
+			mockSrcSession.MockHasTarget = func() bool { return true }
+			mockSrcSession.MockGetSessionOrg = func() models.OrganizationFields { return models.OrganizationFields{Name: "fake_src_org"} }
+			mockSrcSession.MockGetSessionSpace = func() models.SpaceFields { return models.SpaceFields{Name: "fake_src_space"} }
+			mockSrcSession.MockAppSummary = func() api.AppSummaryRepository {
+				return &FakeAppSummaryRepository{
+					GetSummariesInCurrentSpaceStub: func() (apps []models.Application, err error) {
+						apps = []models.Application{models.Application{}}
+						apps[0].Name = "fake_source_app"
+						return
+					},
+				}
+			}
+			mockDestSession.MockGetSessionUsername = func() string { return "fake_user" }
+			mockDestSession.MockOrganizations = func() organizations.OrganizationRepository {
+				return &FakeOrganizationRepository{
 					FindByNameStub: func(name string) (org models.Organization, apiErr error) {
 						Expect(name).To(Equal("fake_dest_org"))
 						org = models.Organization{}
-						org.OrganizationFields.Name = name
+						org.GUID = "1234"
+						org.Name = name
 						return
 					},
 				}
-				return &orgRepo
 			}
-			mockSession.MockSpaces = func() spaces.SpaceRepository {
-				spaceRepo := spacesfakes.FakeSpaceRepository{
-					FindByNameStub: func(name string) (space models.Space, apiErr error) {
+			mockDestSession.MockSpaces = func() spaces.SpaceRepository {
+				return &FakeSpaceRepository{
+					FindByNameInOrgStub: func(name, orgGUID string) (space models.Space, apiErr error) {
 						Expect(name).To(Equal("fake_dest_space"))
+						Expect(orgGUID).To(Equal("1234"))
 						space = models.Space{}
-						space.SpaceFields.Name = name
+						space.Name = name
 						return
 					},
 				}
-				return &spaceRepo
 			}
-			mockSession.MockSetSessionOrg = func(org models.OrganizationFields) {
+			mockDestSession.MockSetSessionOrg = func(org models.OrganizationFields) {
 				Expect(org.Name).To(Equal("fake_dest_org"))
 			}
-			mockSession.MockSetSessionSpace = func(space models.SpaceFields) {
+			mockDestSession.MockSetSessionSpace = func(space models.SpaceFields) {
 				Expect(space.Name).To(Equal("fake_dest_space"))
 			}
-			/*output :=*/ CaptureOutput(func() {
+		})
+
+		It("Should set the target org and space", func() {
+			output := CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
 					DestSpace:      "fake_dest_space",
 					DestOrg:        "fake_dest_org",
+					DestTarget:     "fake_dest_target",
 					SourceAppNames: []string{"fake_source_app"},
 				})
 			})
+			Expect(output[2]).To(Equal("OK"))
 		})
 	})
 })

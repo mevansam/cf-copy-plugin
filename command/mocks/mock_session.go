@@ -8,10 +8,16 @@ import (
 	"code.cloudfoundry.org/cli/cf/api/applications"
 	"code.cloudfoundry.org/cli/cf/api/organizations"
 	"code.cloudfoundry.org/cli/cf/api/spaces"
+	"code.cloudfoundry.org/cli/cf/i18n"
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/plugin"
 	"github.com/mevansam/cf-copy-plugin/helpers"
 )
+
+// MockSessionProvider -
+type MockSessionProvider struct {
+	MockSessionMap map[string]helpers.CloudControllerSession
+}
 
 // MockSession -
 type MockSession struct {
@@ -40,13 +46,25 @@ type MockSession struct {
 	MockUploadDroplet         func(string, string, *os.File) error
 }
 
+// mockLocale -
+type mockLocale struct{}
+
+// Locale -
+func (l *mockLocale) Locale() string {
+	return "en_us"
+}
+
 // NewCloudControllerSessionFromFilepath -
-func (m *MockSession) NewCloudControllerSessionFromFilepath(
+func (p *MockSessionProvider) NewCloudControllerSessionFromFilepath(
 	cli plugin.CliConnection,
 	configPath string,
 	logger *helpers.Logger) helpers.CloudControllerSession {
 
-	return m
+	if i18n.T == nil {
+		i18n.T = i18n.Init(&mockLocale{})
+	}
+
+	return p.MockSessionMap[configPath]
 }
 
 // Close -
@@ -120,7 +138,7 @@ func (m *MockSession) ServiceKeys() api.ServiceKeyRepository {
 
 // AppSummary -
 func (m *MockSession) AppSummary() api.AppSummaryRepository {
-	return m.AppSummary()
+	return m.MockAppSummary()
 }
 
 // Applications -

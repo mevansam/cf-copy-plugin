@@ -43,8 +43,12 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.DestTarget).To(Equal("fake_target"))
 				Expect(o.SourceAppNames[0]).To(Equal("fake_app1"))
 				Expect(o.SourceAppNames[1]).To(Equal("fake_app2"))
+				Expect(o.AppHostFormat).To(Equal("fake_host_format"))
+				Expect(o.AppRouteDomain).To(Equal("fake_domain"))
+				Expect(o.CopyAsDroplet).To(BeTrue())
 				Expect(o.CopyAsUpsServices[0]).To(Equal("fake_svc1"))
 				Expect(o.CopyAsUpsServices[1]).To(Equal("fake_svc2"))
+				Expect(o.RecreateServices).To(BeTrue())
 				Expect(o.ServicesOnly).To(BeTrue())
 			}))
 
@@ -54,8 +58,12 @@ var _ = Describe("Copy Plugin Tests", func() {
 					"fake_space",
 					"fake_org",
 					"fake_target",
-					"--apps", "fake_app,fake_app2",
+					"--apps", "fake_app1,fake_app2",
+					"--host-format", "fake_host_format",
+					"--domain", "fake_domain",
+					"--droplet",
 					"--ups", "fake_svc1,fake_svc2",
+					"--recreate-services",
 					"--services-only",
 				})
 			})
@@ -100,7 +108,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 					"copy",
 					"fake_space",
 					"fake_org",
-					"--app", "fake_app",
+					"--apps", "fake_app",
 				})
 			})
 
@@ -116,7 +124,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 			output := CaptureOutput(func() {
 				copyPluginFake.Run(fakeCliConnection, []string{
 					"copy",
-					"--app", "fake_app",
+					"--apps", "fake_app",
 					"--ups", "fake_svc1,fake_svc2",
 					"--services-only",
 				})

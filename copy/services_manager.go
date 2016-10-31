@@ -27,20 +27,23 @@ type CfCliServiceCollection struct {
 }
 
 // NewCfCliServicesManager -
-func NewCfCliServicesManager(
+func NewCfCliServicesManager() ServicesManager {
+	return &CfCliServicesManager{}
+}
+
+// Init -
+func (sm *CfCliServicesManager) Init(
 	srcCCSession helpers.CloudControllerSession,
 	destCCSession helpers.CloudControllerSession,
 	destTarget, destOrg, destSpace string,
-	logger *helpers.Logger) (ServicesManager, error) {
+	logger *helpers.Logger) error {
 
-	return &CfCliServicesManager{
+	sm.srcCCSession = srcCCSession
+	sm.destCCSession = destCCSession
+	sm.logger = logger
+	sm.serviceKeyFormat = "__%s_copy_for_" + fmt.Sprintf("/%s/%s/%s", destTarget, destOrg, destSpace)
 
-		srcCCSession:  srcCCSession,
-		destCCSession: destCCSession,
-		logger:        logger,
-
-		serviceKeyFormat: "__%s_copy_for_" + fmt.Sprintf("/%s/%s/%s", destTarget, destOrg, destSpace),
-	}, nil
+	return nil
 }
 
 // ServicesToBeCopied - Retrieve details of service instances to be copied
@@ -270,6 +273,10 @@ func (sm *CfCliServicesManager) DoCopy(services ServiceCollection, recreate bool
 		for _, g := range rebindAppGUIDS {
 			sm.logger.DebugMessage("Rebinding app with GUID %s to service %s.", g, serviceInstance.Name)
 			err = sm.destCCSession.ServiceBindings().Create(serviceInstance.GUID, g, make(map[string]interface{}))
+			if err != nil {
+				return
+			}
+			err = sm.destCCSession.Applications().CreateRestageRequest(g)
 			if err != nil {
 				return
 			}

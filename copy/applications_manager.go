@@ -25,30 +25,35 @@ type CfCliApplicationsManager struct {
 // CfCliApplicationCollection -
 type CfCliApplicationCollection struct {
 	defaultDomainAtSrc models.DomainFields
-	applicationsToCopy []*Application
-	appInfoMap         map[string]*Application
+	applicationsToCopy []ApplicationContent
+	appInfoMap         map[string]ApplicationContent
 }
 
 // NewCfCliApplicationsManager -
-func NewCfCliApplicationsManager(
+func NewCfCliApplicationsManager() ApplicationsManager {
+	return &CfCliApplicationsManager{}
+}
+
+// Init -
+func (am *CfCliApplicationsManager) Init(
 	srcCCSession helpers.CloudControllerSession,
 	destCCSession helpers.CloudControllerSession,
-	logger *helpers.Logger) (ApplicationsManager, error) {
+	logger *helpers.Logger) error {
 
 	cliConfigPath, err := confighelpers.DefaultFilePath()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	downloadPath := filepath.Join(filepath.Dir(cliConfigPath), "appcontent")
 	os.RemoveAll(downloadPath)
 	os.MkdirAll(downloadPath, os.ModePerm)
 
-	return &CfCliApplicationsManager{
-		srcCCSession:  srcCCSession,
-		destCCSession: destCCSession,
-		downloadPath:  downloadPath,
-		logger:        logger,
-	}, nil
+	am.srcCCSession = srcCCSession
+	am.destCCSession = destCCSession
+	am.downloadPath = downloadPath
+	am.logger = logger
+
+	return nil
 }
 
 // ApplicationsToBeCopied - Retrieve applications to copied
@@ -58,7 +63,7 @@ func (am *CfCliApplicationsManager) ApplicationsToBeCopied(
 	am.logger.UI.Say("\nDownloading applications to be copied...")
 
 	ac := &CfCliApplicationCollection{
-		appInfoMap: make(map[string]*Application),
+		appInfoMap: make(map[string]ApplicationContent),
 	}
 
 	apps, err := am.srcCCSession.AppSummary().GetSummariesInCurrentSpace()
@@ -75,7 +80,7 @@ func (am *CfCliApplicationsManager) ApplicationsToBeCopied(
 			am.logger.UI.Say("+ downloading application %s", terminal.EntityNameColor(a.Name))
 
 			app := NewApplication(a, am.downloadPath, copyAsDroplet)
-			err = app.Content.Download(am.srcCCSession)
+			err = app.Download(am.srcCCSession)
 			if err != nil {
 				return nil, err
 			}
@@ -123,9 +128,9 @@ func (am *CfCliApplicationsManager) DoCopy(
 	ac := applications.(*CfCliApplicationCollection)
 	for _, a := range ac.applicationsToCopy {
 
-		am.logger.UI.Say("+ %s", terminal.EntityNameColor(a.srcApp.Name))
+		am.logger.UI.Say("+ %s", terminal.EntityNameColor(a.App().Name))
 
-		destApp, err = am.destCCSession.Applications().Read(a.srcApp.Name)
+		destApp, err = am.destCCSession.Applications().Read(a.App().Name)
 		if err != nil {
 			if _, ok := err.(*errors.ModelNotFoundError); !ok {
 				return
@@ -147,7 +152,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 
 		state := strings.ToUpper(models.ApplicationStateStopped)
 
-		params := a.srcApp.ToParams()
+		params := a.App().ToParams()
 		params.GUID = nil
 		params.State = &state
 		params.BuildpackURL = nil
@@ -163,7 +168,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 			"Uploading application %s using params: %# v",
 			params.Name, params)
 
-		destApp, err = a.Content.Upload(am.destCCSession, params)
+		destApp, err = a.Upload(am.destCCSession, params)
 		if err != nil {
 			return
 		}
@@ -205,7 +210,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 			return
 		}
 
-		for _, r := range a.srcApp.Routes {
+		for _, r := range a.App().Routes {
 
 			am.logger.DebugMessage(
 				"Using host part of route %s to source app to derive a unique route to the copied app.",
@@ -213,7 +218,7 @@ func (am *CfCliApplicationsManager) DoCopy(
 
 			if appHostTmpl != nil {
 
-				appHostVars["app"] = a.srcApp.Name
+				appHostVars["app"] = a.App().Name
 				appHostVars["host"] = r.Host
 
 				appHostResult.Truncate(0)

@@ -13,16 +13,20 @@ import (
 	"code.cloudfoundry.org/cli/cf/models"
 )
 
+// ApplicationCopier -
+type ApplicationCopier struct {
+}
+
 // Application -
 type Application struct {
-	srcApp       models.Application
+	srcApp       *models.Application
 	bindServices []string
-
-	Content ApplicationContent
 }
 
 // AppBits -
 type AppBits struct {
+	Application
+
 	appGUID     string
 	filePath    string
 	extractPath string
@@ -30,41 +34,32 @@ type AppBits struct {
 
 // AppDroplet -
 type AppDroplet struct {
+	Application
+
 	appGUID  string
 	filePath string
 }
 
 // NewApplication -
-func NewApplication(srcApp *models.Application, downloadPath string, copyAsDroplet bool) *Application {
-
-	app := &Application{
-		srcApp: *srcApp,
-	}
+func NewApplication(srcApp *models.Application, downloadPath string, copyAsDroplet bool) (app ApplicationContent) {
 
 	if copyAsDroplet {
-		app.Content = app.NewApplicationDroplet(downloadPath)
+		appDroplet := &AppDroplet{}
+		appDroplet.srcApp = srcApp
+		appDroplet.filePath = filepath.Join(downloadPath, srcApp.Name) + ".tgz"
+		app = appDroplet
 	} else {
-		app.Content = app.NewApplicationBits(downloadPath)
+		appBits := &AppBits{}
+		appBits.srcApp = srcApp
+		appBits.filePath = filepath.Join(downloadPath, srcApp.Name) + ".zip"
+		appBits.extractPath = filepath.Join(downloadPath, srcApp.Name)
 	}
-
-	return app
+	return
 }
 
-// NewApplicationDroplet -
-func (a *Application) NewApplicationDroplet(downloadPath string) ApplicationContent {
-	return &AppDroplet{
-		appGUID:  a.srcApp.GUID,
-		filePath: filepath.Join(downloadPath, a.srcApp.Name) + ".tgz",
-	}
-}
-
-// NewApplicationBits -
-func (a *Application) NewApplicationBits(downloadPath string) ApplicationContent {
-	return &AppBits{
-		appGUID:     a.srcApp.GUID,
-		filePath:    filepath.Join(downloadPath, a.srcApp.Name) + ".zip",
-		extractPath: filepath.Join(downloadPath, a.srcApp.Name),
-	}
+// App -
+func (b *AppBits) App() *models.Application {
+	return b.srcApp
 }
 
 // Download -
@@ -75,7 +70,7 @@ func (b *AppBits) Download(session helpers.CloudControllerSession) (err error) {
 		return
 	}
 
-	err = session.DownloadAppContent(b.appGUID, outputFile, false)
+	err = session.DownloadAppContent(b.srcApp.GUID, outputFile, false)
 	if err != nil {
 		return
 	}
@@ -103,6 +98,11 @@ func (b *AppBits) Upload(session helpers.CloudControllerSession, params models.A
 	return
 }
 
+// App -
+func (d *AppDroplet) App() *models.Application {
+	return d.srcApp
+}
+
 // Download -
 func (d *AppDroplet) Download(session helpers.CloudControllerSession) (err error) {
 	outputFile, err := os.OpenFile(d.filePath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
@@ -110,7 +110,7 @@ func (d *AppDroplet) Download(session helpers.CloudControllerSession) (err error
 	if err != nil {
 		return
 	}
-	err = session.DownloadAppContent(d.appGUID, outputFile, true)
+	err = session.DownloadAppContent(d.srcApp.GUID, outputFile, true)
 	return
 }
 

@@ -56,8 +56,18 @@ type appInfo struct {
 }
 
 // NewCopyCommand -
-func NewCopyCommand(targets helpers.Targets, sessionProvider helpers.CloudCountrollerSessionProvider) CopyCmd {
-	return &CopyCommand{sessionProvider: sessionProvider, targets: targets}
+func NewCopyCommand(
+	targets helpers.Targets,
+	sessionProvider helpers.CloudCountrollerSessionProvider,
+	applicationsManager copy.ApplicationsManager,
+	servicesManager copy.ServicesManager) CopyCmd {
+
+	return &CopyCommand{
+		sessionProvider: sessionProvider,
+		targets:         targets,
+		am:              applicationsManager,
+		sm:              servicesManager,
+	}
 }
 
 // Execute -
@@ -81,9 +91,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			err     error
 			message string
 
-			am copy.ApplicationsManager
 			ac copy.ApplicationCollection
-			sm copy.ServicesManager
 			sc copy.ServiceCollection
 		)
 
@@ -119,29 +127,27 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			defer c.srcCCSession.SetSessionSpace(c.srcSpace)
 		}
 
-		am, err = copy.NewCfCliApplicationsManager(c.srcCCSession, c.destCCSession, c.logger)
+		err = c.am.Init(c.srcCCSession, c.destCCSession, c.logger)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return
 		}
-		defer am.Close()
 
-		sm, err = copy.NewCfCliServicesManager(c.srcCCSession, c.destCCSession, o.DestTarget, o.DestOrg, o.DestSpace, c.logger)
+		err = c.sm.Init(c.srcCCSession, c.destCCSession, o.DestTarget, o.DestOrg, o.DestSpace, c.logger)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return
 		}
-		defer sm.Close()
 
 		if !o.ServicesOnly {
-			ac, err = am.ApplicationsToBeCopied(o.SourceAppNames, o.CopyAsDroplet)
+			ac, err = c.am.ApplicationsToBeCopied(o.SourceAppNames, o.CopyAsDroplet)
 			if err != nil {
 				c.logger.UI.Failed(err.Error())
 				return
 			}
 		}
 
-		sc, err = sm.ServicesToBeCopied(o.SourceAppNames, o.CopyAsUpsServices)
+		sc, err = c.sm.ServicesToBeCopied(o.SourceAppNames, o.CopyAsUpsServices)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return
@@ -150,14 +156,14 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 		c.destCCSession.SetSessionOrg(c.destOrg)
 		c.destCCSession.SetSessionSpace(c.destSpace)
 
-		err = sm.DoCopy(sc, o.RecreateServices)
+		err = c.sm.DoCopy(sc, o.RecreateServices)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return
 		}
 
 		if !o.ServicesOnly {
-			err = am.DoCopy(ac, sc, o.AppHostFormat, o.AppRouteDomain)
+			err = c.am.DoCopy(ac, sc, o.AppHostFormat, o.AppRouteDomain)
 			if err != nil {
 				c.logger.UI.Failed(err.Error())
 				return
@@ -173,6 +179,9 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 }
 
 func (c *CopyCommand) cleanup() {
+	c.am.Close()
+	c.sm.Close()
+
 	if c.srcCCSession != nil {
 		c.srcCCSession.Close()
 	}

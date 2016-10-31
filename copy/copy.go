@@ -7,6 +7,10 @@ import (
 
 // ApplicationsManager -
 type ApplicationsManager interface {
+	Init(srcCCSession helpers.CloudControllerSession,
+		destCCSession helpers.CloudControllerSession,
+		logger *helpers.Logger) error
+
 	ApplicationsToBeCopied(appNames []string, copyAsDroplet bool) (ApplicationCollection, error)
 	DoCopy(applications ApplicationCollection, services ServiceCollection, appHostFormat string, appRouteDomain string) error
 	Close()
@@ -18,6 +22,11 @@ type ApplicationCollection interface {
 
 // ServicesManager -
 type ServicesManager interface {
+	Init(srcCCSession helpers.CloudControllerSession,
+		destCCSession helpers.CloudControllerSession,
+		destTarget, destOrg, destSpace string,
+		logger *helpers.Logger) error
+
 	ServicesToBeCopied(appNames []string, upsServices []string) (ServiceCollection, error)
 	DoCopy(services ServiceCollection, recreate bool) error
 	Close()
@@ -30,12 +39,12 @@ type ServiceCollection interface {
 
 // ApplicationContentProvider -
 type ApplicationContentProvider interface {
-	NewApplicationDroplet(downloadPath string) ApplicationContent
-	NewApplicationBits(downloadPath string) ApplicationContent
+	NewApplication(srcApp *models.Application, downloadPath string, copyAsDroplet bool) ApplicationContent
 }
 
 // ApplicationContent -
 type ApplicationContent interface {
+	App() *models.Application
 	Download(session helpers.CloudControllerSession) error
 	Upload(session helpers.CloudControllerSession, params models.AppParams) (models.Application, error)
 }
