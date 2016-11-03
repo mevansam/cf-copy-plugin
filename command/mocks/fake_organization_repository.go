@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/cli/cf/models"
-	"github.com/cloudfoundry/cli/cf/api/organizations"
+	"code.cloudfoundry.org/cli/cf/api/organizations"
 )
 
 type FakeOrganizationRepository struct {

@@ -1,8 +1,8 @@
 package command_test
 
 import (
-	. "code.cloudfoundry.org/cli/testhelpers/io"
-	. "github.com/cloudfoundry/cli/plugin/pluginfakes"
+	. "code.cloudfoundry.org/cli/plugin/pluginfakes"
+	. "code.cloudfoundry.org/cli/utils/testhelpers/io"
 	. "github.com/mevansam/cf-copy-plugin/command"
 	. "github.com/mevansam/cf-copy-plugin/command/mocks"
 	. "github.com/onsi/ginkgo"
