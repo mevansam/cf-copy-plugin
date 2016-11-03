@@ -18,8 +18,10 @@ import (
 type CfCliApplicationsManager struct {
 	srcCCSession  helpers.CloudControllerSession
 	destCCSession helpers.CloudControllerSession
-	downloadPath  string
 	logger        *helpers.Logger
+
+	copier       ApplicationCopier
+	downloadPath string
 }
 
 // CfCliApplicationCollection -
@@ -31,7 +33,7 @@ type CfCliApplicationCollection struct {
 
 // NewCfCliApplicationsManager -
 func NewCfCliApplicationsManager() ApplicationsManager {
-	return &CfCliApplicationsManager{}
+	return &CfCliApplicationsManager{copier: ApplicationCopier{}}
 }
 
 // Init -
@@ -79,7 +81,7 @@ func (am *CfCliApplicationsManager) ApplicationsToBeCopied(
 
 			am.logger.UI.Say("+ downloading application %s", terminal.EntityNameColor(a.Name))
 
-			app := NewApplication(a, am.downloadPath, copyAsDroplet)
+			app := am.copier.NewApplication(a, am.downloadPath, copyAsDroplet)
 			err = app.Download(am.srcCCSession)
 			if err != nil {
 				return nil, err

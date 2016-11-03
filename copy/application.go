@@ -41,7 +41,7 @@ type AppDroplet struct {
 }
 
 // NewApplication -
-func NewApplication(srcApp *models.Application, downloadPath string, copyAsDroplet bool) (app ApplicationContent) {
+func (a *ApplicationCopier) NewApplication(srcApp *models.Application, downloadPath string, copyAsDroplet bool) (app ApplicationContent) {
 
 	if copyAsDroplet {
 		appDroplet := &AppDroplet{}
