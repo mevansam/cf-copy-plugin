@@ -67,8 +67,7 @@ release-build:
           if [[ $? -eq 0 ]]; then
             ./build-all.sh release
           else
-            echo "Changes made to branch 'master' does not have an associated tag. This is a NOP workflow."
-            exit 1
+            echo "No new tag for release build was detected."
           fi
           set -e
 
@@ -77,15 +76,12 @@ integration-test:
     - script:
         name: Echo done
         code: |
-          set -x
-
           LAST_TAG=$(git describe --abbrev=0 --tags)
           git log --format=%B -n 1 $WERCKER_GIT_COMMIT | grep "CF copy plugin binary releases for $LAST_TAG" 2>&1 > /dev/null
           if [[ $? -eq 0 ]]; then
             echo "INTEGRATION TESTS SUCCESSFUL!!!"
           else
-            echo "Skipping pipeline in NOP workflow."
-            exit 1
+            echo "Last commit was not for release binaries."
           fi
 
 deploy:
@@ -93,13 +89,10 @@ deploy:
     - script:
         name: Echo done
         code: |
-          set -x
-
           LAST_TAG=$(git describe --abbrev=0 --tags)
           git log --format=%B -n 1 $WERCKER_GIT_COMMIT | grep "CF copy plugin binary releases for $LAST_TAG" 2>&1 > /dev/null
           if [[ $? -eq 0 ]]; then
             echo "DEPLOY DONE!!!"
           else
-            echo "Skipping pipeline in NOP workflow."
-            exit 1
+            echo "Last commit was not for release binaries."
           fi
