@@ -48,6 +48,9 @@ release-build:
     - wercker/setup-go-workspace:
       package-dir: github.com/mevansam/cf-copy-plugin
 
+    - add-ssh-key:
+      keyname: GIT_RELEASE_KEY
+
     - script:
       name: Check if TAG is set
       code: |
@@ -77,6 +80,8 @@ release-build:
     - script:
       name: Build all
       code: |
+        git config --global user.email "$GIT_USER_EMAIL"
+        git config --global user.name "$GIT_USER_NAME"
         ./build-all.sh release
 
 integration-test:
