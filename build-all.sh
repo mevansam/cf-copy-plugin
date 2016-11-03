@@ -1,22 +1,15 @@
 #!/bin/bash
 
-if [[ "$1" == "release" ]] ; then
-	TAG="$2"
-	: ${TAG:?"Usage: build_all.sh [release] [TAG]"}
+TAG="$(git tag -l --points-at HEAD)"
+if [[ -n "$TAG" ]] ; then
 
-	git tag | grep $TAG > /dev/null 2>&1
-	if [ $? -eq 0 ] ; then
-		echo "$TAG exists, remove it or increment"
-		exit 1
-	else
-		MAJOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $1;}'`
-		MINOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $2;}'`
-		BUILD=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $3;}'`
+	MAJOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $1;}'`
+	MINOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $2;}'`
+	BUILD=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $3;}'`
 
-		`sed -i .bak -e "s/Major:.*/Major: $MAJOR,/" \
-			-e "s/Minor:.*/Minor: $MINOR,/" \
-			-e "s/Build:.*/Build: $BUILD,/" command/copy_plugin.go`
-	fi
+	`sed -i -e "s/Major:.*/Major: $MAJOR,/" \
+		-e "s/Minor:.*/Minor: $MINOR,/" \
+		-e "s/Build:.*/Build: $BUILD,/" command/copy_plugin.go`
 fi
 
 GOOS=linux GOARCH=amd64 go build
@@ -42,9 +35,10 @@ sed "s/_TAG_/$TAG/" |
 sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
 cat
 
-if [[ "$1" == "release" ]] ; then
-	git commit -am "Build version $TAG"
-	git tag $TAG
+if [[ -n "$TAG" ]] ; then
+	echo git tag -d $TAG
+	echo git commit -am "Build version $TAG"
+	echo git tag -a $TAG
+	echo git push --follow-tags
 	echo "Tagged release, 'git push --tags' to move it to github, and copy the output above"
-	echo "to the cli repo you plan to deploy in"
 fi
