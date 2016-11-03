@@ -77,6 +77,13 @@ integration-test:
     - script:
         name: Echo done
         code: |
+          set -x
+
+          git show-ref --tags
+          git rev-parse HEAD
+          git log --format=%B -n 1 $WERCKER_GIT_COMMIT
+          git describe --abbrev=0 --tags
+
           if [[ -e $WERCKER_OUTPUT_DIR/release ]]; then
             echo "INTEGRATION TESTS SUCCESSFUL!!!"
           else
