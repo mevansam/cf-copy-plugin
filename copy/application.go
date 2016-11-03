@@ -53,6 +53,7 @@ func (a *ApplicationCopier) NewApplication(srcApp *models.Application, downloadP
 		appBits.srcApp = srcApp
 		appBits.filePath = filepath.Join(downloadPath, srcApp.Name) + ".zip"
 		appBits.extractPath = filepath.Join(downloadPath, srcApp.Name)
+		app = appBits
 	}
 	return
 }
