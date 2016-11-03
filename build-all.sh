@@ -15,6 +15,10 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		-e "s/Build:.*/Build: $BUILD,/" command/copy_plugin.go`
 fi
 
+go get -u github.com/kardianos/govendor
+govendor sync
+govendor test +local
+
 GOOS=linux GOARCH=amd64 go build
 LINUX64_SHA1=`cat cf-copy-plugin | openssl sha1`
 mkdir -p bin/linux64
