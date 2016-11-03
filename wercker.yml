@@ -27,15 +27,28 @@ build:
 
 release-build:
   steps:
+    - wercker/setup-go-workspace:
+      package-dir: github.com/mevansam/cf-copy-plugin
+
+    - script:
+      name: Get govendor
+      code: |
+        go get -u github.com/kardianos/govendor
+
+    - script:
+      name: Synchronize vendored dependencies
+      code: |
+        govendor sync
+
+    - script:
+      name: Run unit tests
+      code: |
+        govendor test +local
+
     - script:
       name: Build all
       code: |
         ./build-all.sh
-
-    - script:
-      name: Echo done
-      code: |
-        echo "BUILD RELEASE SUCCESSFUL!!!"
 
 integration-test:
   steps:
