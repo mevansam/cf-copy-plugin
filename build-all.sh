@@ -1,7 +1,9 @@
 #!/bin/bash
 
+set -x
+
 TAG="$(git tag -l --points-at HEAD)"
-if [[ -n "$TAG" ]] ; then
+if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	MAJOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $1;}'`
 	MINOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $2;}'`
@@ -35,10 +37,11 @@ sed "s/_TAG_/$TAG/" |
 sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
 cat
 
-if [[ -n "$TAG" ]] ; then
-	echo git tag -d $TAG
-	echo git commit -am "Build version $TAG"
-	echo git tag -a $TAG
-	echo git push --follow-tags
-	echo "Tagged release, 'git push --tags' to move it to github, and copy the output above"
+if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
+	git tag -d $TAG
+	git commit -am "Build version $TAG"
+	git tag -a $TAG
+	git push --follow-tags
 fi
+
+set +x
