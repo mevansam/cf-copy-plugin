@@ -48,10 +48,6 @@ release-build:
     - wercker/setup-go-workspace:
         package-dir: github.com/mevansam/cf-copy-plugin
 
-    - add-ssh-key:
-        keyname: GIT_KEY
-        host: github.com
-
     - script:
         name: Check if TAG is set
         code: |
