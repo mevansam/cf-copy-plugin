@@ -25,3 +25,14 @@ build:
       name: Build all
       code: |
         ./build-all.sh
+
+deploy:
+  steps:
+
+    - wercker/setup-go-workspace:
+      package-dir: github.com/mevansam/cf-copy-plugin
+
+    - script:
+      name: Echo done
+      code: |
+        echo "DONE!!!"
