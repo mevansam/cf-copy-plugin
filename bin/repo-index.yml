@@ -1,0 +1,21 @@
+- name: Copy Applications & Services
+  description: Copies applications and services in current space to another space or Cloud Foundry target.
+  version: 0.0.4
+  created: 2016-10-01T00:00:00Z
+  updated: 2016-11-03T21:04:50Z
+  company:
+  authors:
+  - name: Mevan Samaratunga
+    homepage: http://github.com/mevansam/
+    contact: mevansam@gmail.com
+  homepage: http://github.com/mevansam/cf-copy-plugin
+  binaries:
+  - platform: osx
+    url: http://github.com/mevansam/cf-copy-plugin/raw/0.0.4/bin/osx/copy_plugin
+    checksum: (stdin)= 948d1a1184c558dc72bb6cd45e71b89df8339a98
+  - platform: win64
+    url: http://github.com/mevansam/cf-copy-plugin/raw/0.0.4/bin/win64/copy_plugin.exe
+    checksum: (stdin)= 6c52705f96a3218def2e17a83a57e124b7370733
+  - platform: linux64
+    url: http://github.com/mevansam/cf-copy-plugin/raw/0.0.4/bin/linux64/copy_plugin
+    checksum: (stdin)= 2dee0d5d93ca655002ea397400c523c144eddec4
