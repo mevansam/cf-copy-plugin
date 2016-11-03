@@ -53,7 +53,7 @@ release-build:
       code: |
         set -x
         git branch -vv
-        git show-ref --tags --verify
+        git show-ref --tags refs/tags/0.0.1 --verify
         git tag -l --points-at HEAD | grep "^[0-9]*\.[0-9]*\.[0-9]*$" 2>&1 > /dev/null
         if [[ $? -eq 1 ]]; then
           echo "Changes made to branch 'master' does not have an associated tag. Build will not proceed."
