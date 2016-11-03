@@ -51,6 +51,10 @@ release-build:
     - wercker/add-to-known_hosts:
         hostname: github.com
 
+    - add-ssh-key:
+        keyname: GIT_RELEASE_KEY
+        host: github.com
+
     - script:
         name: Check if TAG is set
         code: |
