@@ -49,7 +49,7 @@ release-build:
         package-dir: github.com/mevansam/cf-copy-plugin
 
     - add-ssh-key:
-        keyname: GIT_RELEASE_KEY
+        keyname: GIT_KEY
         host: github.com
 
     - script:
