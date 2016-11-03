@@ -2,7 +2,7 @@
   description: Copies applications and services in current space to another space or Cloud Foundry target.
   version: 0.0.4
   created: 2016-10-01T00:00:00Z
-  updated: 2016-11-03T22:12:47Z
+  updated: 2016-11-03T22:20:52Z
   company:
   authors:
   - name: Mevan Samaratunga
