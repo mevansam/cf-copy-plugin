@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -x
+set -e
 
 TAG="$(git tag -l --points-at HEAD)"
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
@@ -47,4 +48,5 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 	git push --follow-tags
 fi
 
+set +e
 set +x
