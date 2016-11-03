@@ -6,6 +6,11 @@ build:
       package-dir: github.com/mevansam/cf-copy-plugin
 
     - script:
+      name: Git info
+      code: |
+        git branch
+
+    - script:
       name: Get govendor
       code: |
         go get -u github.com/kardianos/govendor
@@ -30,6 +35,11 @@ release-build:
     - wercker/setup-go-workspace:
       package-dir: github.com/mevansam/cf-copy-plugin
 
+    - script:
+      name: Git info
+      code: |
+        git branch
+        
     - script:
       name: Get govendor
       code: |
