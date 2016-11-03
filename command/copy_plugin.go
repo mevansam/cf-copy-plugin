@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/cli/cf/terminal"
 	"code.cloudfoundry.org/cli/cf/trace"
 
-	"github.com/cloudfoundry/cli/plugin"
+	"code.cloudfoundry.org/cli/plugin"
 )
 
 // CopyPlugin -
@@ -35,7 +35,7 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 		Name: "CopyPlugin",
 		Version: plugin.VersionType{
 			Major: 0,
-			Minor: 1,
+			Minor: 0,
 			Build: 0,
 		},
 		Commands: []plugin.Command{
