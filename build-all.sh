@@ -35,12 +35,12 @@ sed "s/win64-sha1/$WIN64_SHA1/" |
 sed "s/linux64-sha1/$LINUX64_SHA1/" |
 sed "s/_TAG_/$TAG/" |
 sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
-cat
+cat > bin/repo-index.yml
 
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	MSG="CF copy plugin release $TAG - created by $(git config user.name)"
-	
+
 	git tag -d $TAG
 	git commit -am $MSG
 	git tag -a $TAG -m $MSG
