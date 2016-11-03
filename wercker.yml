@@ -1,6 +1,6 @@
 box: golang
 
-initial-build:
+build:
   steps:
     - wercker/setup-go-workspace:
       package-dir: github.com/mevansam/cf-copy-plugin
@@ -21,35 +21,9 @@ initial-build:
         go build ./...
 
     - script:
-      name: Echo done
-      code: |
-        echo "INITIAL BUILD SUCCESSFUL!!!"
-
-unit-test:
-  steps:
-    - script:
       name: Run unit tests
       code: |
         govendor test +local
-
-    - script:
-      name: Echo done
-      code: |
-        echo "UNIT TESTS SUCCESSFUL!!!"
-
-development-build:
-
-    - script:
-      name: Echo done
-      code: |
-        echo "DEVELOPMENT BUILD SUCCESSFUL!!!"
-
-integration-test:
-  steps:
-    - script:
-      name: Echo done
-      code: |
-        echo "INTEGRATION TESTS SUCCESSFUL!!!"
 
 release-build:
   steps:
@@ -62,6 +36,13 @@ release-build:
       name: Echo done
       code: |
         echo "BUILD RELEASE SUCCESSFUL!!!"
+
+integration-test:
+  steps:
+    - script:
+      name: Echo done
+      code: |
+        echo "INTEGRATION TESTS SUCCESSFUL!!!"
 
 deploy:
   steps:
