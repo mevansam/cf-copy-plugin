@@ -6,6 +6,10 @@ build:
       package-dir: github.com/mevansam/cf-copy-plugin
 
     - script:
+      name: Set VAR
+      code: export TEST_VAR="Hello WORLD!"     
+
+    - script:
       name: Get govendor
       code: |
         go get -u github.com/kardianos/govendor
@@ -25,10 +29,20 @@ build:
       code: |
         govendor test +local
 
+    - script:
+      name: Show VAR
+      code: echo $TEST_VAR
+
 release-build:
   steps:
     - wercker/setup-go-workspace:
       package-dir: github.com/mevansam/cf-copy-plugin
+
+    - script:
+      name: Check if TAG is set
+      code: |
+        [ `git tag -l --points-at HEAD` | grep "^[0-9]*\.[0-9]*\.[0-9]*$" && exit 0
+        exit 1
 
     - script:
       name: Get govendor
