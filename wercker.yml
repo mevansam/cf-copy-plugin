@@ -81,6 +81,7 @@ release-build:
     - script:
         name: Build all
         code: |
+          cat /root/.ssh/config
           git config --global user.email "$GIT_USER_EMAIL"
           git config --global user.name "$GIT_USER_NAME"
           git config --global push.default simple
