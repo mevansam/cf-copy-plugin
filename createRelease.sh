@@ -16,6 +16,7 @@ if [[ $MERGE_BRANCH == "master" ]]; then
     echo "Cannot create a release from the master branch. Release is created by merging changes from a feature branch."
     exit 1
 fi
+trap 'git checkout $MERGE_BRANCH' INT TERM EXIT
 
 echo "Creating release $TAG by merging changes from branch $MERGE_BRANCH"
 
