@@ -295,7 +295,7 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 		c.destSpace = space.SpaceFields
 
 		c.logger.DebugMessage("Destination Org => %# v", c.destOrg)
-		c.logger.DebugMessage("Desintation Space => %# v", c.destSpace)
+		c.logger.DebugMessage("Destination Space => %# v", c.destSpace)
 
 		ok = true
 	}
