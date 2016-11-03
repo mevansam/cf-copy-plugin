@@ -36,7 +36,7 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 		Version: plugin.VersionType{
 			Major: 0,
 			Minor: 0,
-			Build: 4,
+			Build: 5,
 		},
 		Commands: []plugin.Command{
 			{
