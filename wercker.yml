@@ -78,7 +78,6 @@ integration-test:
         name: Echo done
         code: |
           set -x
-
           git show-ref --tags
           git rev-parse HEAD
           git log --format=%B -n 1 $WERCKER_GIT_COMMIT
