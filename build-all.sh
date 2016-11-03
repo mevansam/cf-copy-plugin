@@ -40,13 +40,11 @@ cat > bin/repo-index.yml
 
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
-	MSG="CF copy plugin release $TAG - created by $(git config user.name)"
+	MSG="CF copy plugin binary releases for $TAG - created by $(git config user.name)"
 
 	git checkout master
-	git tag -d $TAG
 	git commit -am "$MSG"
-	git tag -a $TAG -m "$MSG"
-	git push --follow-tags
+	git push
 fi
 
 set +e

@@ -56,49 +56,46 @@ release-build:
         host: github.com
 
     - script:
-        name: Check if TAG is set
+        name: Build All
         code: |
           set -x
-          git show-ref --tags
-          git tag -l --points-at HEAD | grep "^[0-9]*\.[0-9]*\.[0-9]*$" 2>&1 > /dev/null
-          if [[ $? -eq 1 ]]; then
-            echo "Changes made to branch 'master' does not have an associated tag. Build will not proceed."
-            exit 1
-          fi
 
-    - script:
-        name: Get govendor
-        code: |
-          go get -u github.com/kardianos/govendor
-
-    - script:
-        name: Synchronize vendored dependencies
-        code: |
-          govendor sync
-
-    - script:
-        name: Run unit tests
-        code: |
-          govendor test +local
-
-    - script:
-        name: Build all
-        code: |
           git config --global user.email "$GIT_USER_EMAIL"
           git config --global user.name "$GIT_USER_NAME"
           git config --global push.default simple
-          ./build-all.sh release
+
+          git tag -l --points-at HEAD | grep "^[0-9]*\.[0-9]*\.[0-9]*$" 2>&1 > /dev/null
+          if [[ $? -eq 0 ]]; then
+          
+            go get -u github.com/kardianos/govendor
+            govendor sync
+            govendor test +local
+            ./build-all.sh release
+
+            touch $WERCKER_OUTPUT_DIR/release
+
+          else
+            echo "Changes made to branch 'master' does not have an associated tag. This is a NOP workflow."
+          fi
 
 integration-test:
   steps:
     - script:
         name: Echo done
         code: |
-          echo "INTEGRATION TESTS SUCCESSFUL!!!"
+          if [[ -e $WERCKER_OUTPUT_DIR/release ]]; then
+            echo "INTEGRATION TESTS SUCCESSFUL!!!"
+          else
+            echo "Skipping pipeline in NOP workflow."
+          fi
 
 deploy:
   steps:
     - script:
         name: Echo done
         code: |
-          echo "DEPLOY DONE!!!"
+          if [[ -e $WERCKER_OUTPUT_DIR/release ]]; then
+            echo "DEPLOY DONE!!!"
+          else
+            echo "Skipping pipeline in NOP workflow."
+          fi
