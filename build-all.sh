@@ -42,6 +42,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	MSG="CF copy plugin release $TAG - created by $(git config user.name)"
 
+	git checkout master
 	git tag -d $TAG
 	git commit -am "$MSG"
 	git tag -a $TAG -m "$MSG"
