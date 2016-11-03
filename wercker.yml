@@ -15,6 +15,9 @@ development-build:
     - wercker/setup-go-workspace:
         package-dir: github.com/mevansam/cf-copy-plugin
 
+    - wercker/add-to-known_hosts:
+        hostname: github.com        
+
     - script:
         name: Set VAR
         code: export TEST_VAR="Hello WORLD!"     
