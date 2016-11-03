@@ -1,8 +1,7 @@
 box: golang
 
-build:
+initial-build:
   steps:
-
     - wercker/setup-go-workspace:
       package-dir: github.com/mevansam/cf-copy-plugin
 
@@ -17,22 +16,52 @@ build:
         govendor sync
 
     - script:
+      name: Build
+      code: |
+        go build ./...
+
+    - script:
+      name: Echo done
+      code: |
+        echo "INITIAL BUILD DONE!!!"
+
+unit-test:
+  steps:
+    - script:
       name: Run unit tests
       code: |
         govendor test +local
 
     - script:
+      name: Echo done
+      code: |
+        echo "UNIT TESTS DONE!!!"
+
+integration-test:
+  steps:
+    - script:
+      name: Echo done
+      code: |
+        echo "INTEGRATION TESTS DONE!!!"
+
+release-build:
+  steps:
+    - script:
       name: Build all
       code: |
         ./build-all.sh
 
+    - script:
+      name: Echo done
+      code: |
+        echo "BUILD RELEASE DONE!!!"
+
 deploy:
   steps:
-
     - wercker/setup-go-workspace:
       package-dir: github.com/mevansam/cf-copy-plugin
 
     - script:
       name: Echo done
       code: |
-        echo "DONE!!!"
+        echo "DEPLOY DONE!!!"
