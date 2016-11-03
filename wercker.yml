@@ -1,6 +1,16 @@
 box: golang
 
-build:
+launch-build:
+  steps:
+    - script:
+      name: Show git branch detail
+      code: git branch -vv    
+
+    - script:
+      name: Show current commit detail
+      code: git show    
+
+development-build:
   steps:
     - wercker/setup-go-workspace:
       package-dir: github.com/mevansam/cf-copy-plugin
