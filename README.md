@@ -1,6 +1,8 @@
 Cloud Foundry CLI Copy Plugin
 ===
 
+[![wercker status](https://app.wercker.com/status/5f82a30d9d41959cd93fd4ffe2039b1a/m/master "wercker status")](https://app.wercker.com/project/byKey/5f82a30d9d41959cd93fd4ffe2039b1a)
+
 This plugin allows you to copy artifacts from one Cloud Foundry space to another space within the same org or 
 different org within the same deployment. It can also copy artifacts to a different Cloud Foundry target that 
 has been saved using the '[CF Targets](https://github.com/guidowb/cf-targets-plugin)' plugin. Use the plugin 

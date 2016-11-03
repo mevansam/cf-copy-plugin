@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-if [[ "$1" = "release" ]] ; then
+if [[ "$1" == "release" ]] ; then
 	TAG="$2"
 	: ${TAG:?"Usage: build_all.sh [release] [TAG]"}
 
@@ -39,9 +39,10 @@ sed "s/osx-sha1/$OSX_SHA1/" |
 sed "s/win64-sha1/$WIN64_SHA1/" |
 sed "s/linux64-sha1/$LINUX64_SHA1/" |
 sed "s/_TAG_/$TAG/" |
+sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
 cat
 
-if [[ "$1" = "release" ]] ; then
+if [[ "$1" == "release" ]] ; then
 	git commit -am "Build version $TAG"
 	git tag $TAG
 	echo "Tagged release, 'git push --tags' to move it to github, and copy the output above"
