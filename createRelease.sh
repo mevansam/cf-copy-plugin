@@ -22,7 +22,7 @@ echo "Creating release $TAG by merging changes from branch $MERGE_BRANCH"
 
 git checkout master
 git merge $MERGE_BRANCH
-git tag -a $TAG -m "CF copy plugin release $TAG"
+git tag -a $TAG -m "CF copy plugin release $TAG - created by $(git config user.name)"
 git push --follow-tags
 
 git checkout $MERGE_BRANCH
