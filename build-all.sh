@@ -38,9 +38,12 @@ sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
 cat
 
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
+
+	MSG="CF copy plugin release $TAG - created by $(git config user.name)"
+	
 	git tag -d $TAG
-	git commit -am "Build version $TAG"
-	git tag -a $TAG
+	git commit -am $MSG
+	git tag -a $TAG -m $MSG
 	git push --follow-tags
 fi
 
