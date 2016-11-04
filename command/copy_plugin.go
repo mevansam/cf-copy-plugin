@@ -32,7 +32,7 @@ func (c *CopyPlugin) Start() {
 // GetMetadata -
 func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
-		Name: "CopyPlugin",
+		Name: "copy",
 		Version: plugin.VersionType{
 			Major: 0,
 			Minor: 0,
