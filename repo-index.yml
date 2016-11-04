@@ -1,4 +1,4 @@
-- name: Copy Applications & Services
+- name: copy
   description: Copies applications and services in current space to another space or Cloud Foundry target.
   version: _TAG_
   created: 2016-10-01T00:00:00Z
