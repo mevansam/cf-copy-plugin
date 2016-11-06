@@ -22,17 +22,17 @@ govendor test +local
 GOOS=linux GOARCH=amd64 go build
 LINUX64_SHA1=`cat cf-copy-plugin | openssl sha1`
 mkdir -p bin/linux64
-mv cf-copy-plugin bin/linux64/copy_plugin
+mv cf-copy-plugin bin/linux64/cf-copy-plugin
 
 GOOS=darwin GOARCH=amd64 go build
 OSX_SHA1=`cat cf-copy-plugin | openssl sha1`
 mkdir -p bin/osx
-mv cf-copy-plugin bin/osx/copy_plugin
+mv cf-copy-plugin bin/osx/cf-copy-plugin
 
 GOOS=windows GOARCH=amd64 go build
 WIN64_SHA1=`cat cf-copy-plugin.exe | openssl sha1`
 mkdir -p bin/win64
-mv cf-copy-plugin.exe bin/win64/copy_plugin.exe
+mv cf-copy-plugin.exe bin/win64/cf-copy-plugin.exe
 
 cat repo-index.yml |
 sed "s/osx-sha1/$OSX_SHA1/" |
