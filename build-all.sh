@@ -20,19 +20,19 @@ govendor sync
 govendor test +local
 
 GOOS=linux GOARCH=amd64 go build
-LINUX64_SHA1=`cat cf-copy-plugin | openssl sha1`
 mkdir -p bin/linux64
 mv cf-copy-plugin bin/linux64/cf-copy-plugin
+LINUX64_SHA1=$(cat bin/linux64/cf-copy-plugin | openssl sha1 | awk '{ print $2 }')
 
 GOOS=darwin GOARCH=amd64 go build
-OSX_SHA1=`cat cf-copy-plugin | openssl sha1`
 mkdir -p bin/osx
 mv cf-copy-plugin bin/osx/cf-copy-plugin
+OSX_SHA1=$(cat bin/osx/cf-copy-plugin | openssl sha1 | awk '{ print $2 }')
 
 GOOS=windows GOARCH=amd64 go build
-WIN64_SHA1=`cat cf-copy-plugin.exe | openssl sha1`
 mkdir -p bin/win64
 mv cf-copy-plugin.exe bin/win64/cf-copy-plugin.exe
+WIN64_SHA1=$(cat bin/win64/cf-copy-plugin.exe | openssl sha1 | awk '{ print $2 }')
 
 cat repo-index.yml |
 sed "s/osx-sha1/$OSX_SHA1/" |
