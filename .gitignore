@@ -28,4 +28,4 @@ _*
 
 .wercker/
 vendor/*/
-cf-copy-plugin
+/cf-copy-plugin
