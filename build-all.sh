@@ -47,6 +47,19 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 	MSG="CF copy plugin binary releases for $TAG"
 
 	git checkout master
+	
+	git rm --cached bin/repo-index.yml
+	git add bin/repo-index.yml
+
+	git rm --cached bin/linux64/cf-copy-plugin
+	git add bin/linux64/cf-copy-plugin
+
+	git rm --cached bin/osx/cf-copy-plugin
+	git add bin/osx/cf-copy-plugin
+
+	git rm --cached bin/win64/cf-copy-plugin.exe
+	git add bin/win64/cf-copy-plugin.exe
+
 	git commit -am "$MSG"
 	git push
 fi
