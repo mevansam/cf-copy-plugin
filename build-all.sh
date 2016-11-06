@@ -6,6 +6,11 @@ set -e
 TAG="$(git tag -l --points-at HEAD)"
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
+	git checkout master
+	
+	git tag -d $TAG
+	git push origin :refs/tags/$TAG	
+
 	MAJOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $1;}'`
 	MINOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $2;}'`
 	BUILD=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $3;}'`
@@ -13,6 +18,11 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 	`sed -i -e "s/Major:.*/Major: $MAJOR,/" \
 		-e "s/Minor:.*/Minor: $MINOR,/" \
 		-e "s/Build:.*/Build: $BUILD,/" command/copy_plugin.go`
+
+	git rm --cached bin/repo-index.yml
+	git rm --cached bin/linux64/cf-copy-plugin
+	git rm --cached bin/osx/cf-copy-plugin
+	git rm --cached bin/win64/cf-copy-plugin.exe
 fi
 
 go get -u github.com/kardianos/govendor
@@ -44,24 +54,16 @@ cat > bin/repo-index.yml
 
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
-	MSG="CF copy plugin binary releases for $TAG"
-
-	git checkout master
-	
-	git rm --cached bin/repo-index.yml
 	git add bin/repo-index.yml
-
-	git rm --cached bin/linux64/cf-copy-plugin
 	git add bin/linux64/cf-copy-plugin
-
-	git rm --cached bin/osx/cf-copy-plugin
 	git add bin/osx/cf-copy-plugin
-
-	git rm --cached bin/win64/cf-copy-plugin.exe
 	git add bin/win64/cf-copy-plugin.exe
 
-	git commit -am "$MSG"
-	git push
+	MSG="CF copy plugin binary releases for $TAG"
+
+	git commit -am $MSG
+	git tag -a $TAG -m $MSG
+	git push --follow-tags
 fi
 
 set +e
