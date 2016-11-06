@@ -61,8 +61,8 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	MSG="CF copy plugin binary releases for $TAG"
 
-	git commit -m $MSG
-	git tag -a $TAG -m $MSG
+	git commit -am "$MSG"
+	git tag -a "$TAG" -m "$MSG"
 	git push --follow-tags
 fi
 
