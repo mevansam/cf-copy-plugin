@@ -16,10 +16,6 @@ development-build:
         package-dir: github.com/mevansam/cf-copy-plugin
 
     - script:
-        name: Set VAR
-        code: export TEST_VAR="Hello WORLD!"     
-
-    - script:
         name: Get govendor
         code: |
           go get -u github.com/kardianos/govendor
@@ -38,10 +34,6 @@ development-build:
         name: Run unit tests
         code: |
           govendor test +local
-
-    - script:
-        name: Show VAR
-        code: echo $TEST_VAR
 
 release-build:
   steps:
