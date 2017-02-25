@@ -62,8 +62,8 @@ cat > bin/repo-index.yml
 
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
-	if [[ -n $GITHUB_USER ]] || [[ -n $GITHUB_TOKEN ]]; then
-		echo -e "\nThe environment variables GITHUB_USER and GITHUB_TOKEN were not found."
+	if [[ -z $GITHUB_USER ]] || [[ -z $GITHUB_TOKEN ]]; then
+		echo -e "\nThe environment variables GITHUB_USER or GITHUB_TOKEN were not found."
 		echo -e "They need to be exported to the environment when creating a release.\n"
 		exit 1
 	fi
