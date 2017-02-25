@@ -8,11 +8,12 @@ import (
 	"code.cloudfoundry.org/cli/cf/api/spaces"
 	"code.cloudfoundry.org/cli/cf/models"
 	. "code.cloudfoundry.org/cli/plugin/pluginfakes"
-	. "code.cloudfoundry.org/cli/utils/testhelpers/io"
+	io_helpers "code.cloudfoundry.org/cli/util/testhelpers/io"
+	"github.com/mevansam/cf-cli-api/cfapi"
+	. "github.com/mevansam/cf-cli-api/cfapi/mocks"
+	. "github.com/mevansam/cf-cli-api/copy/mocks"
 	. "github.com/mevansam/cf-copy-plugin/command"
 	. "github.com/mevansam/cf-copy-plugin/command/mocks"
-	. "github.com/mevansam/cf-copy-plugin/copy/mocks"
-	"github.com/mevansam/cf-copy-plugin/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -44,7 +45,7 @@ var _ = Describe("Copy Command Tests", func() {
 		mockSrcSession = &MockSession{}
 		mockDestSession = &MockSession{}
 
-		mockSessionProvider = &MockSessionProvider{make(map[string]helpers.CloudControllerSession)}
+		mockSessionProvider = &MockSessionProvider{MockSessionMap: make(map[string]cfapi.CfSession)}
 		mockSessionProvider.MockSessionMap["/fake/source/target.json"] = mockSrcSession
 		mockSessionProvider.MockSessionMap["/fake/dest/target.json"] = mockDestSession
 
@@ -59,7 +60,7 @@ var _ = Describe("Copy Command Tests", func() {
 			fakeCliConnection.CliCommandWithoutTerminalOutputStub = func(args ...string) ([]string, error) {
 				return strings.Split(cf_plugins_out_1, "\n"), nil
 			}
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{})
 			})
 			Expect(output[0]).To(Equal("FAILED"))
@@ -69,7 +70,7 @@ var _ = Describe("Copy Command Tests", func() {
 			fakeCliConnection.CliCommandWithoutTerminalOutputStub = func(args ...string) ([]string, error) {
 				return strings.Split(cf_plugins_out_2, "\n"), nil
 			}
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
 					DestSpace:      "fake_dest_space",
 					DestOrg:        "fake_dest_org",
@@ -85,7 +86,7 @@ var _ = Describe("Copy Command Tests", func() {
 				return strings.Split(cf_plugins_out_2, "\n"), nil
 			}
 			mockSrcSession.MockHasTarget = func() bool { return false }
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
 					DestSpace:      "fake_dest_space",
 					DestOrg:        "fake_dest_org",
@@ -103,7 +104,7 @@ var _ = Describe("Copy Command Tests", func() {
 			mockSrcSession.MockHasTarget = func() bool { return true }
 			mockSrcSession.MockGetSessionOrg = func() models.OrganizationFields { return models.OrganizationFields{Name: "fake_dest_org"} }
 			mockSrcSession.MockGetSessionSpace = func() models.SpaceFields { return models.SpaceFields{Name: "fake_dest_space"} }
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
 					DestSpace:      "fake_dest_space",
 					DestOrg:        "fake_dest_org",
@@ -165,7 +166,7 @@ var _ = Describe("Copy Command Tests", func() {
 		})
 
 		It("Should set the target org and space", func() {
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyCommand.Execute(fakeCliConnection, &CopyOptions{
 					DestSpace:      "fake_dest_space",
 					DestOrg:        "fake_dest_org",

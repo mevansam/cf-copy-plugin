@@ -1,2 +1,0 @@
-package copy_test
-

@@ -2,7 +2,7 @@ package command_test
 
 import (
 	. "code.cloudfoundry.org/cli/plugin/pluginfakes"
-	. "code.cloudfoundry.org/cli/utils/testhelpers/io"
+	io_helpers "code.cloudfoundry.org/cli/util/testhelpers/io"
 	. "github.com/mevansam/cf-copy-plugin/command"
 	. "github.com/mevansam/cf-copy-plugin/command/mocks"
 	. "github.com/onsi/ginkgo"
@@ -52,7 +52,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.ServicesOnly).To(BeTrue())
 			}))
 
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyPluginFake.Run(fakeCliConnection, []string{
 					"copy",
 					"fake_space",
@@ -82,7 +82,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.ServicesOnly).To(BeFalse())
 			}))
 
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyPluginFake.Run(fakeCliConnection, []string{
 					"copy",
 					"fake_space",
@@ -103,7 +103,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.ServicesOnly).To(BeFalse())
 			}))
 
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyPluginFake.Run(fakeCliConnection, []string{
 					"copy",
 					"fake_space",
@@ -121,7 +121,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Fail("CLI argument parsing should have failed and been handled.")
 			}))
 
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyPluginFake.Run(fakeCliConnection, []string{
 					"copy",
 					"--apps", "fake_app",
@@ -140,7 +140,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Fail("CLI argument parsing should have failed and been handled.")
 			}))
 
-			output := CaptureOutput(func() {
+			output := io_helpers.CaptureOutput(func() {
 				copyPluginFake.Run(fakeCliConnection, []string{
 					"copy",
 					"fake_space",

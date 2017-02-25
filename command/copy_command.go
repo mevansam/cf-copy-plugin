@@ -6,18 +6,20 @@ import (
 	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/terminal"
 	"code.cloudfoundry.org/cli/plugin"
-	"github.com/mevansam/cf-copy-plugin/copy"
+	"github.com/mevansam/cf-cli-api/cfapi"
+	"github.com/mevansam/cf-cli-api/copy"
+	"github.com/mevansam/cf-cli-api/utils"
 	"github.com/mevansam/cf-copy-plugin/helpers"
 )
 
 // CopyCommand -
 type CopyCommand struct {
-	sessionProvider helpers.CloudCountrollerSessionProvider
+	sessionProvider cfapi.CfSessionProvider
 	targets         helpers.Targets
 
 	o      *CopyOptions
 	cli    plugin.CliConnection
-	logger *helpers.Logger
+	logger *cfapi.Logger
 
 	am copy.ApplicationsManager
 	sm copy.ServicesManager
@@ -27,8 +29,8 @@ type CopyCommand struct {
 	destOrg   models.OrganizationFields
 	destSpace models.SpaceFields
 
-	srcCCSession  helpers.CloudControllerSession
-	destCCSession helpers.CloudControllerSession
+	srcCCSession  cfapi.CfSession
+	destCCSession cfapi.CfSession
 }
 
 // CopyOptions -
@@ -58,7 +60,7 @@ type appInfo struct {
 // NewCopyCommand -
 func NewCopyCommand(
 	targets helpers.Targets,
-	sessionProvider helpers.CloudCountrollerSessionProvider,
+	sessionProvider cfapi.CfSessionProvider,
 	applicationsManager copy.ApplicationsManager,
 	servicesManager copy.ServicesManager) CopyCmd {
 
@@ -80,7 +82,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 		err error
 	)
 
-	c.logger = helpers.NewLogger(o.Debug, o.TracePath)
+	c.logger = cfapi.NewLogger(o.Debug, o.TracePath)
 
 	c.cli = cli
 	c.o = o
@@ -133,7 +135,8 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			return
 		}
 
-		err = c.sm.Init(c.srcCCSession, c.destCCSession, o.DestTarget, o.DestOrg, o.DestSpace, c.logger)
+		serviceKeyFormat := "__%s_copy_for_" + fmt.Sprintf("/%s/%s/%s", "destTarget", "destOrg", "destSpace")
+		err = c.sm.Init(c.srcCCSession, c.destCCSession, serviceKeyFormat, c.logger)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return
@@ -232,10 +235,20 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 		}
 
 		// Initialize and validate source and destination sessions
-		c.srcCCSession = c.sessionProvider.NewCloudControllerSessionFromFilepath(
-			c.cli, c.targets.GetTargetConfigPath(currentTarget), c.logger)
-		c.destCCSession = c.sessionProvider.NewCloudControllerSessionFromFilepath(
-			c.cli, c.targets.GetTargetConfigPath(c.o.DestTarget), c.logger)
+		sslDisabled, _ := c.cli.IsSSLDisabled()
+
+		if c.srcCCSession, err = c.sessionProvider.NewCfSessionFromFilepath(
+			c.targets.GetTargetConfigPath(currentTarget), sslDisabled, c.logger); err != nil {
+
+			c.logger.UI.Failed("Error creating source session: %s", err.Error())
+			return
+		}
+		if c.destCCSession, err = c.sessionProvider.NewCfSessionFromFilepath(
+			c.targets.GetTargetConfigPath(c.o.DestTarget), sslDisabled, c.logger); err != nil {
+
+			c.logger.UI.Failed("Error creating destination session: %s", err.Error())
+			return
+		}
 
 		if !c.srcCCSession.HasTarget() {
 			c.logger.UI.Failed("The CLI target org and space needs to be set.")
@@ -269,7 +282,7 @@ func (c *CopyCommand) initialize() (ok bool, err error) {
 		} else {
 			// Validate source application exists
 			for _, n := range c.o.SourceAppNames {
-				if _, contains := helpers.ContainsApp(n, apps); !contains {
+				if _, contains := utils.ContainsApp(n, apps); !contains {
 					if err != nil {
 						c.logger.UI.Failed("The application '%s' does not exist.", n)
 						return
