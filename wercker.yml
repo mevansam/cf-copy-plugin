@@ -80,6 +80,7 @@ release-build:
             # Skip if commit was for release files. 
             git log --format=%B -n 1 $WERCKER_GIT_COMMIT | grep "CF copy plugin binary releases for $LAST_TAG" 2>&1 > /dev/null
             if [[ $? -eq 1 ]]; then
+              set -e
               ./build-all.sh release $GIT_USER_NAME $GIT_TOKEN
             else
               echo "Last commit was for release files."
