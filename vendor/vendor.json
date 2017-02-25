@@ -765,6 +765,12 @@
 			"revisionTime": "2017-02-03T23:56:03Z"
 		},
 		{
+			"checksumSHA1": "NBffuJimj0WpIF0LzmH9qC9ezeE=",
+			"path": "github.com/mevansam/cf-cli-api",
+			"revision": "42dd3d33547f65f43e59579bb811790b7fc8290b",
+			"revisionTime": "2017-02-25T19:36:15Z"
+		},
+		{
 			"checksumSHA1": "4pa4NEsR95/hk3FRtqI+SiQD4Vw=",
 			"path": "github.com/mevansam/cf-cli-api/cfapi",
 			"revision": "8f0bfa0843475694d37644be6da9225edcde2ba6",
