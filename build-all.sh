@@ -1,14 +1,5 @@
 #!/bin/bash
 
-if [[ "$1" == "help" ]] || ( [[ "$1" == "release" ]] && [[ $# -ne 3 ]] ); then
-    echo -e "\nUSAGE: ./build-all.sh [release] [USER] [TOKEN]"
-    echo -e "\n    release  Specifiying 'release' will publish the release to Github"
-	echo -e "    USER     Github user required to publish the release"
-    echo -e "    TOKEN    Github API Token for invoking the publish APIs"
-	echo -e "\nIf release is specified then USER and TOKEN must be provided.\n"
-    exit 1
-fi
-
 which github-release 2>&1 > /dev/null
 if [[ $? == 1 ]]; then
     echo -e "Unable to find the 'github-release' CLI. You need to download it"
@@ -94,13 +85,11 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 	popd
 
 	# Publish release
-	USER=$2
 	REPO=$(basename $(pwd))
-	export GITHUB_TOKEN=$3
 
 	echo "Creating Github release draft..."
 	github-release release \
-		--user $USER \
+		--user $GIT_USER_NAME \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin" \
@@ -108,7 +97,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	echo "Uploading cf-copy-plugin_linux64.tar.gz to release..."
 	github-release upload \
-		--user $USER \
+		--user $GIT_USER_NAME \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin_linux64.tar.gz" \
@@ -116,7 +105,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	echo "Uploading cf-copy-plugin_osx.tar.gz to release..."
 	github-release upload \
-		--user $USER \
+		--user $GIT_USER_NAME \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin_osx.tar.gz" \
@@ -124,7 +113,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	echo "Uploading cf-copy-plugin_win64.zip to release..."
 	github-release upload \
-		--user $USER \
+		--user $GIT_USER_NAME \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin_win64.zip" \
@@ -132,7 +121,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		
 	echo "Modifying Github release as final..."
 	github-release edit \
-		--user $USER \
+		--user $GIT_USER_NAME \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin" \
