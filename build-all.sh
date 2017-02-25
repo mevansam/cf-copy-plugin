@@ -62,6 +62,12 @@ cat > bin/repo-index.yml
 
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
+	if [[ -n $GITHUB_USER ]] || [[ -n $GITHUB_TOKEN ]]; then
+		echo -e "\nThe environment variables GITHUB_USER and GITHUB_TOKEN were not found."
+		echo -e "They need to be exported to the environment when creating a release.\n"
+		exit 1
+	fi
+
 	git add bin/repo-index.yml
 	git add bin/linux64/cf-copy-plugin
 	git add bin/osx/cf-copy-plugin
@@ -89,7 +95,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	echo "Creating Github release draft..."
 	github-release release \
-		--user $GIT_USER_NAME \
+		--user $GITHUB_USER \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin" \
@@ -97,7 +103,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	echo "Uploading cf-copy-plugin_linux64.tar.gz to release..."
 	github-release upload \
-		--user $GIT_USER_NAME \
+		--user $GITHUB_USER \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin_linux64.tar.gz" \
@@ -105,7 +111,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	echo "Uploading cf-copy-plugin_osx.tar.gz to release..."
 	github-release upload \
-		--user $GIT_USER_NAME \
+		--user $GITHUB_USER \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin_osx.tar.gz" \
@@ -113,7 +119,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	echo "Uploading cf-copy-plugin_win64.zip to release..."
 	github-release upload \
-		--user $GIT_USER_NAME \
+		--user $GITHUB_USER \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin_win64.zip" \
@@ -121,7 +127,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		
 	echo "Modifying Github release as final..."
 	github-release edit \
-		--user $GIT_USER_NAME \
+		--user $GITHUB_USER \
 		--repo $REPO \
 		--tag $TAG \
 		--name "cf-copy-plugin" \
