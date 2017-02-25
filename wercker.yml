@@ -33,7 +33,7 @@ development-build:
     - script:
         name: Run unit tests
         code: |
-          govendor test +local
+          govendor test -v +local
 
 release-build:
   steps:
