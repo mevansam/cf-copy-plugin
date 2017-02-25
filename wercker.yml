@@ -44,10 +44,10 @@ release-build:
         hostname: github.com
 
     - script:
-        name: Download git-release CLI
+        name: Install release tools
         code: |
           sudo apt-get update
-          sudo apt-get install bzip2
+          sudo apt-get install zip bzip2
 
           pushd /tmp
           set -x
