@@ -1,5 +1,22 @@
 #!/bin/bash
 
+if [[ "$1" == "help" ]] || ( [[ "$1" == "release" ]] && [[ $# -ne 3 ]] ); then
+    echo -e "\nUSAGE: ./build-all.sh [release] [USER] [TOKEN]"
+    echo -e "\n    release  Specifiying 'release' will publish the release to Github"
+	echo -e "    USER     Github user required to publish the release"
+    echo -e "    TOKEN    Github API Token for invoking the publish APIs"
+	echo -e "\nIf release is specified then USER and TOKEN must be provided.\n"
+    exit 1
+fi
+
+which github-release 2>&1 > /dev/null
+if [[ $? == 1 ]]; then
+    echo -e "Unable to find the 'github-release' CLI. You need to download it"
+    echo -e "from https://github.com/aktau/github-release/releases/tag/v0.6.2"
+    echo -e "save the CLI binary to the system path."
+    exit 1
+fi
+
 set -x
 set -e
 
@@ -64,6 +81,62 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 	git commit -am "$MSG"
 	git tag -a "$TAG" -m "$MSG"
 	git push --follow-tags
+
+	# Create archives of release
+	rm -f *.tar.gz
+	rm -f *.zip
+
+	tar cvzf cf-copy-plugin_linux64.tar.gz -C bin/linux64 cf-copy-plugin
+	tar cvzf cf-copy-plugin_osx.tar.gz -C bin/osx cf-copy-plugin
+
+	pushd bin/win64
+	zip ../../cf-copy-plugin_win64.zip cf-copy-plugin.exe
+	popd
+
+	# Publish release
+	USER=$2
+	REPO=$(basename $(pwd))
+	export GITHUB_TOKEN=$3
+
+	echo "Creating Github release draft..."
+	github-release release \
+		--user $USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin" \
+		--draft
+
+	echo "Uploading cf-copy-plugin_linux64.tar.gz to release..."
+	github-release upload \
+		--user $USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin_linux64.tar.gz" \
+		--file cf-copy-plugin_linux64.tar.gz
+
+	echo "Uploading cf-copy-plugin_osx.tar.gz to release..."
+	github-release upload \
+		--user $USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin_osx.tar.gz" \
+		--file cf-copy-plugin_osx.tar.gz
+
+	echo "Uploading cf-copy-plugin_win64.zip to release..."
+	github-release upload \
+		--user $USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin_win64.zip" \
+		--file cf-copy-plugin_win64.zip
+		
+	echo "Modifying Github release as final..."
+	github-release edit \
+		--user $USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin" \
+		--description "Release version $TAG of cf-copy-plugin. It is recommend that you install this plugin via the community website https://plugins.cloudfoundry.org/."
 fi
 
 set +e

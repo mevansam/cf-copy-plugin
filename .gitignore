@@ -26,6 +26,9 @@ command/download_droplet_cmd.go.bak
 env.sh
 _*
 
+*.gz
+*.zip
+
 .wercker/
 vendor/*/
 /cf-copy-plugin
