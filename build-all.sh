@@ -68,16 +68,16 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		exit 1
 	fi
 
-	git add bin/repo-index.yml
-	git add bin/linux64/cf-copy-plugin
-	git add bin/osx/cf-copy-plugin
-	git add bin/win64/cf-copy-plugin.exe
+	# git add bin/repo-index.yml
+	# git add bin/linux64/cf-copy-plugin
+	# git add bin/osx/cf-copy-plugin
+	# git add bin/win64/cf-copy-plugin.exe
 
-	MSG="CF copy plugin binary releases for $TAG"
+	# MSG="CF copy plugin binary releases for $TAG"
 
-	git commit -am "$MSG"
-	git tag -a "$TAG" -m "$MSG"
-	git push --follow-tags
+	# git commit -am "$MSG"
+	# git tag -a "$TAG" -m "$MSG"
+	# git push --follow-tags
 
 	# Create archives of release
 	rm -f *.tar.gz
