@@ -8,7 +8,6 @@ if [[ $? == 1 ]]; then
     exit 1
 fi
 
-set -x
 set -e
 
 TAG="$(git tag -l --points-at HEAD)"
@@ -68,16 +67,9 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		exit 1
 	fi
 
-	# git add bin/repo-index.yml
-	# git add bin/linux64/cf-copy-plugin
-	# git add bin/osx/cf-copy-plugin
-	# git add bin/win64/cf-copy-plugin.exe
-
-	# MSG="CF copy plugin binary releases for $TAG"
-
-	# git commit -am "$MSG"
-	# git tag -a "$TAG" -m "$MSG"
-	# git push --follow-tags
+	echo "--- cf-plugin-repo repo-index.yml update ---"
+	cat repo-index.yml
+	echo "--------------------------------------------"
 
 	# Create archives of release
 	rm -f *.tar.gz
@@ -135,4 +127,3 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 fi
 
 set +e
-set +x
