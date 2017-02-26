@@ -31,4 +31,5 @@ _*
 
 .wercker/
 vendor/*/
+bin/
 /cf-copy-plugin
