@@ -13,11 +13,6 @@ set -e
 TAG="$(git tag -l --points-at HEAD)"
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
-	git checkout master
-	
-	git tag -d $TAG
-	git push origin :refs/tags/$TAG	
-
 	MAJOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $1;}'`
 	MINOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $2;}'`
 	BUILD=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $3;}'`
@@ -25,11 +20,6 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 	`sed -i -e "s/Major:.*/Major: $MAJOR,/" \
 		-e "s/Minor:.*/Minor: $MINOR,/" \
 		-e "s/Build:.*/Build: $BUILD,/" command/copy_plugin.go`
-
-	git rm --cached bin/repo-index.yml
-	git rm --cached bin/linux64/cf-copy-plugin
-	git rm --cached bin/osx/cf-copy-plugin
-	git rm --cached bin/win64/cf-copy-plugin.exe
 fi
 
 go get -u github.com/kardianos/govendor
@@ -57,7 +47,7 @@ sed "s/win64-sha1/$WIN64_SHA1/" |
 sed "s/linux64-sha1/$LINUX64_SHA1/" |
 sed "s/_TAG_/$TAG/" |
 sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
-cat > bin/repo-index.yml
+cat > repo-index-out.yml
 
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
@@ -68,7 +58,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 	fi
 
 	echo "--- cf-plugin-repo repo-index.yml update ---"
-	cat repo-index.yml
+	cat repo-index-out.yml
 	echo "--------------------------------------------"
 
 	# Create archives of release
