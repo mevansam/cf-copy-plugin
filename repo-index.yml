@@ -10,12 +10,12 @@
     contact: mevansam@gmail.com
   homepage: http://github.com/mevansam/cf-copy-plugin
   binaries:
-  - platform: osx
-    url: https://github.com/mevansam/cf-copy-plugin/raw/_TAG_/bin/osx/cf-copy-plugin
+  - platform: osx         
+    url: https://github.com/mevansam/cf-copy-plugin/releases/download/_TAG_/cf-copy-plugin_osx
     checksum: osx-sha1
   - platform: win64
-    url: https://github.com/mevansam/cf-copy-plugin/raw/_TAG_/bin/win64/cf-copy-plugin.exe
+    url: https://github.com/mevansam/cf-copy-plugin/releases/download/_TAG_/cf-copy-plugin_win64.exe
     checksum: win64-sha1
   - platform: linux64
-    url: https://github.com/mevansam/cf-copy-plugin/raw/_TAG_/bin/linux64/cf-copy-plugin
+    url: https://github.com/mevansam/cf-copy-plugin/releases/download/_TAG_/cf-copy-plugin_linux64
     checksum: linux64-sha1
