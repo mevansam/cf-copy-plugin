@@ -96,7 +96,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		--user $GITHUB_USER \
 		--repo $REPO \
 		--tag $TAG \
-		--name "cf-copy-plugin_linux64.tar.gz" \
+		--name "cf-copy-plugin_linux64" \
 		--file bin/linux64/cf-copy-plugin
 
 	echo "Uploading cf-copy-plugin_osx.tar.gz to release..."
@@ -112,7 +112,7 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		--user $GITHUB_USER \
 		--repo $REPO \
 		--tag $TAG \
-		--name "cf-copy-plugin_osx.tar.gz" \
+		--name "cf-copy-plugin_osx" \
 		--file bin/osx/cf-copy-plugin
 
 	echo "Uploading cf-copy-plugin_win64.zip to release..."
