@@ -91,6 +91,14 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		--name "cf-copy-plugin_linux64.tar.gz" \
 		--file cf-copy-plugin_linux64.tar.gz
 
+	echo "Uploading Linux binary to release..."
+	github-release upload \
+		--user $GITHUB_USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin_linux64.tar.gz" \
+		--file bin/linux64/cf-copy-plugin
+
 	echo "Uploading cf-copy-plugin_osx.tar.gz to release..."
 	github-release upload \
 		--user $GITHUB_USER \
@@ -98,6 +106,14 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		--tag $TAG \
 		--name "cf-copy-plugin_osx.tar.gz" \
 		--file cf-copy-plugin_osx.tar.gz
+		
+	echo "Uploading OSX binary to release..."
+	github-release upload \
+		--user $GITHUB_USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin_osx.tar.gz" \
+		--file bin/osx/cf-copy-plugin
 
 	echo "Uploading cf-copy-plugin_win64.zip to release..."
 	github-release upload \
@@ -106,6 +122,14 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		--tag $TAG \
 		--name "cf-copy-plugin_win64.zip" \
 		--file cf-copy-plugin_win64.zip
+
+	echo "Uploading Windows binary to release..."
+	github-release upload \
+		--user $GITHUB_USER \
+		--repo $REPO \
+		--tag $TAG \
+		--name "cf-copy-plugin_win64.exe" \
+		--file bin/win64/cf-copy-plugin.exe
 		
 	echo "Modifying Github release as final..."
 	github-release edit \
