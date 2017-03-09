@@ -82,7 +82,7 @@ release-build:
             git tag -n1 -l $TAG_AT_COMMIT | grep "CF copy plugin release $TAG_AT_COMMIT" 2>&1 > /dev/null
             if [[ $? -eq 0 ]]; then
               set -e
-              ./build-all.sh release
+              ./build-release.sh release
             else
               set -e
               echo "No new tag for release build was detected."
@@ -90,37 +90,3 @@ release-build:
           fi
 
           set +x
-
-integration-test:
-  steps:
-    - script:
-        name: Echo done
-        code: |
-          LAST_TAG=$(git describe --abbrev=0 --tags)
-
-          set +e
-          # Run integration test if commit was for release files. 
-          git log --format=%B -n 1 $WERCKER_GIT_COMMIT | grep "CF copy plugin binary releases for $LAST_TAG" 2>&1 > /dev/null
-          if [[ $? -eq 0 ]]; then
-            echo "INTEGRATION TESTS SUCCESSFUL!!!"
-          else
-            echo "Last commit was not for release binaries."
-          fi
-          set -e
-
-deploy:
-  steps:
-    - script:
-        name: Echo done
-        code: |
-          LAST_TAG=$(git describe --abbrev=0 --tags)
-
-          set +e
-          # Run deployment if commit was for release files. 
-          git log --format=%B -n 1 $WERCKER_GIT_COMMIT | grep "CF copy plugin binary releases for $LAST_TAG" 2>&1 > /dev/null
-          if [[ $? -eq 0 ]]; then
-            echo "DEPLOY DONE!!!"
-          else
-            echo "Last commit was not for release binaries."
-          fi
-          set -e

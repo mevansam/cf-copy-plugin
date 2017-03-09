@@ -1,0 +1,21 @@
+- name: copy
+  description: Copies applications and services in current space to another space or Cloud Foundry target.
+  version: 0.9.0
+  created: 2016-10-01T00:00:00Z
+  updated: 
+  company:
+  authors:
+  - name: Mevan Samaratunga
+    homepage: http://github.com/mevansam/
+    contact: mevansam@gmail.com
+  homepage: http://github.com/mevansam/cf-copy-plugin
+  binaries:
+  - platform: osx         
+    url: https://github.com/mevansam/cf-copy-plugin/releases/download/0.9.0/cf-copy-plugin_osx
+    checksum: 27ee896d05952165b1fc9b35be7c2a3f60581322
+  - platform: win64
+    url: https://github.com/mevansam/cf-copy-plugin/releases/download/0.9.0/cf-copy-plugin_win64.exe
+    checksum: bb6edf55d6a131bfc2576a37bc8f6f4251f32045
+  - platform: linux64
+    url: https://github.com/mevansam/cf-copy-plugin/releases/download/0.9.0/cf-copy-plugin_linux64
+    checksum: 7de846de1d8ab6863428d62bbc72ecf5559a02a8

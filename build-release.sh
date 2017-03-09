@@ -9,6 +9,7 @@ if [[ $? == 1 ]]; then
 fi
 
 set -e
+set -x
 
 TAG="$(git tag -l --points-at HEAD)"
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
@@ -41,14 +42,6 @@ mkdir -p bin/win64
 mv cf-copy-plugin.exe bin/win64/cf-copy-plugin.exe
 WIN64_SHA1=$(cat bin/win64/cf-copy-plugin.exe | openssl sha1 | awk '{ print $2 }')
 
-cat repo-index.yml |
-sed "s/osx-sha1/$OSX_SHA1/" |
-sed "s/win64-sha1/$WIN64_SHA1/" |
-sed "s/linux64-sha1/$LINUX64_SHA1/" |
-sed "s/_TAG_/$TAG/" |
-sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
-cat > repo-index-out.yml
-
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 
 	if [[ -z $GITHUB_USER ]] || [[ -z $GITHUB_TOKEN ]]; then
@@ -56,6 +49,14 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		echo -e "They need to be exported to the environment when creating a release.\n"
 		exit 1
 	fi
+
+	cat repo-index.yml |
+	sed "s/osx-sha1/$OSX_SHA1/" |
+	sed "s/win64-sha1/$WIN64_SHA1/" |
+	sed "s/linux64-sha1/$LINUX64_SHA1/" |
+	sed "s/_TAG_/$TAG/" |
+	sed "s/_TIMESTAMP_/$(date --utc +%FT%TZ)/" |
+	cat > repo-index-out.yml
 
 	echo "--- cf-plugin-repo repo-index.yml update ---"
 	cat repo-index-out.yml
@@ -138,6 +139,23 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		--tag $TAG \
 		--name "cf-copy-plugin" \
 		--description "Release version $TAG of cf-copy-plugin. It is recommend that you install this plugin via the community website https://plugins.cloudfoundry.org/."
+fi
+
+if [[ "$1" == "docker-release" ]] && [[ -n "$TAG" ]] ; then
+    docker build . -t cf-cli-copy-release --squash
+
+    if [[ -n $3 ]] && [[ -n $4 ]]; then
+        docker login -u $3 -p $4
+
+        docker tag cf-cli-copy-release $2/cf-cli-copy:latest
+        docker tag cf-cli-copy-release $2/cf-cli-copy:$TAG
+        docker push $2/cf-cli-copy
+
+        # clean up
+        docker rmi $2/cf-cli-copy:latest
+        docker rmi $2/cf-cli-copy:$TAG
+        docker rmi cf-cli-copy-release
+    fi
 fi
 
 set +e
