@@ -9,7 +9,6 @@ if [[ $? == 1 ]]; then
 fi
 
 set -e
-set -x
 
 TAG="$(git tag -l --points-at HEAD)"
 if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
@@ -139,23 +138,6 @@ if [[ "$1" == "release" ]] && [[ -n "$TAG" ]] ; then
 		--tag $TAG \
 		--name "cf-copy-plugin" \
 		--description "Release version $TAG of cf-copy-plugin. It is recommend that you install this plugin via the community website https://plugins.cloudfoundry.org/."
-fi
-
-if [[ "$1" == "docker-release" ]] && [[ -n "$TAG" ]] ; then
-    docker build . -t cf-cli-copy-release --squash
-
-    if [[ -n $3 ]] && [[ -n $4 ]]; then
-        docker login -u $3 -p $4
-
-        docker tag cf-cli-copy-release $2/cf-cli-copy:latest
-        docker tag cf-cli-copy-release $2/cf-cli-copy:$TAG
-        docker push $2/cf-cli-copy
-
-        # clean up
-        docker rmi $2/cf-cli-copy:latest
-        docker rmi $2/cf-cli-copy:$TAG
-        docker rmi cf-cli-copy-release
-    fi
 fi
 
 set +e
