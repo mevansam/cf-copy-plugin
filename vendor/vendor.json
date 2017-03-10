@@ -183,7 +183,7 @@
 			"revisionTime": "2017-02-03T23:56:03Z"
 		},
 		{
-			"checksumSHA1": "i3JAviRQZ/VAu1jv6myTxYpMJRM=",
+			"checksumSHA1": "CmwJ8ScJ2xsCJC7zegIbiEcUqHE=",
 			"path": "code.cloudfoundry.org/cli/cf/api/resources",
 			"revision": "489fb5030c24b678a6232cc730d328cd7b2d98e9",
 			"revisionTime": "2017-02-03T23:56:03Z"
@@ -765,34 +765,34 @@
 			"revisionTime": "2017-02-03T23:56:03Z"
 		},
 		{
-			"checksumSHA1": "4pa4NEsR95/hk3FRtqI+SiQD4Vw=",
+			"checksumSHA1": "GQWg60Q5Rd7+r/fcw+BfnO/PZvk=",
 			"path": "github.com/mevansam/cf-cli-api/cfapi",
-			"revision": "42dd3d33547f65f43e59579bb811790b7fc8290b",
-			"revisionTime": "2017-02-25T19:36:15Z"
+			"revision": "5f799ab7455969bcbbbd365121b90b129498efc6",
+			"revisionTime": "2017-03-10T06:42:50Z"
 		},
 		{
-			"checksumSHA1": "weUNuIVWk1KMxYnwhpHJolb31JA=",
+			"checksumSHA1": "bVSySsYM4XV0ZhBubLNmCB7Xadc=",
 			"path": "github.com/mevansam/cf-cli-api/cfapi/mocks",
-			"revision": "42dd3d33547f65f43e59579bb811790b7fc8290b",
-			"revisionTime": "2017-02-25T19:36:15Z"
+			"revision": "5f799ab7455969bcbbbd365121b90b129498efc6",
+			"revisionTime": "2017-03-10T06:42:50Z"
 		},
 		{
-			"checksumSHA1": "SjebOdCekmS0+UQduC6o/EVbr6w=",
+			"checksumSHA1": "e4y54iqTXGP56yqAAt6V1LTuHmk=",
 			"path": "github.com/mevansam/cf-cli-api/copy",
-			"revision": "42dd3d33547f65f43e59579bb811790b7fc8290b",
-			"revisionTime": "2017-02-25T19:36:15Z"
+			"revision": "5f799ab7455969bcbbbd365121b90b129498efc6",
+			"revisionTime": "2017-03-10T06:42:50Z"
 		},
 		{
 			"checksumSHA1": "H/q3W9vDMeB1Cs9QpqGq6UlQzPU=",
 			"path": "github.com/mevansam/cf-cli-api/copy/mocks",
-			"revision": "42dd3d33547f65f43e59579bb811790b7fc8290b",
-			"revisionTime": "2017-02-25T19:36:15Z"
+			"revision": "5f799ab7455969bcbbbd365121b90b129498efc6",
+			"revisionTime": "2017-03-10T06:42:50Z"
 		},
 		{
 			"checksumSHA1": "zmjPn0Eisgfma05QFi0hameCnbY=",
 			"path": "github.com/mevansam/cf-cli-api/utils",
-			"revision": "42dd3d33547f65f43e59579bb811790b7fc8290b",
-			"revisionTime": "2017-02-25T19:36:15Z"
+			"revision": "5f799ab7455969bcbbbd365121b90b129498efc6",
+			"revisionTime": "2017-03-10T06:42:50Z"
 		},
 		{
 			"checksumSHA1": "JLBw2uXliPcb4GuI8syufshneKM=",
