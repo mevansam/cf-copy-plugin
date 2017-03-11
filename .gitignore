@@ -28,8 +28,11 @@ _*
 
 *.gz
 *.zip
+*.bak*
 
 .wercker/
+.vagrant/
+
 vendor/*/
 bin/
 /cf-copy-plugin
