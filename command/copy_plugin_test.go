@@ -46,8 +46,8 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.AppHostFormat).To(Equal("fake_host_format"))
 				Expect(o.AppRouteDomain).To(Equal("fake_domain"))
 				Expect(o.CopyAsDroplet).To(BeTrue())
-				Expect(o.CopyAsUpsServices[0]).To(Equal("fake_svc1"))
-				Expect(o.CopyAsUpsServices[1]).To(Equal("fake_svc2"))
+				Expect(o.ServiceInstancesToCopyAsUPS[0]).To(Equal("fake_svc1"))
+				Expect(o.ServiceInstancesToCopyAsUPS[1]).To(Equal("fake_svc2"))
 				Expect(o.RecreateServices).To(BeTrue())
 				Expect(o.ServicesOnly).To(BeTrue())
 			}))
@@ -78,7 +78,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.DestOrg).To(Equal(""))
 				Expect(o.DestTarget).To(Equal(""))
 				Expect(o.SourceAppNames).To(BeEmpty())
-				Expect(o.CopyAsUpsServices).To(BeEmpty())
+				Expect(o.ServiceInstancesToCopyAsUPS).To(BeEmpty())
 				Expect(o.ServicesOnly).To(BeFalse())
 			}))
 
@@ -99,7 +99,7 @@ var _ = Describe("Copy Plugin Tests", func() {
 				Expect(o.DestOrg).To(Equal("fake_org"))
 				Expect(o.DestTarget).To(Equal(""))
 				Expect(o.SourceAppNames[0]).To(Equal("fake_app"))
-				Expect(o.CopyAsUpsServices).To(BeEmpty())
+				Expect(o.ServiceInstancesToCopyAsUPS).To(BeEmpty())
 				Expect(o.ServicesOnly).To(BeFalse())
 			}))
 

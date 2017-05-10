@@ -35,16 +35,21 @@ type CopyCommand struct {
 
 // CopyOptions -
 type CopyOptions struct {
-	DestSpace         string
-	DestOrg           string
-	DestTarget        string
-	SourceAppNames    []string
-	AppHostFormat     string
-	AppRouteDomain    string
-	CopyAsDroplet     bool
-	CopyAsUpsServices []string
-	RecreateServices  bool
-	ServicesOnly      bool
+	DestSpace  string
+	DestOrg    string
+	DestTarget string
+
+	SourceAppNames []string
+	AppHostFormat  string
+	AppRouteDomain string
+
+	CopyAsDroplet bool
+
+	ServiceInstancesToCopyAsUPS []string
+	ServiceTypesToCopyAsUPS     []string
+
+	RecreateServices bool
+	ServicesOnly     bool
 
 	Debug     bool
 	TracePath string
@@ -150,7 +155,7 @@ func (c *CopyCommand) Execute(cli plugin.CliConnection, o *CopyOptions) {
 			}
 		}
 
-		sc, err = c.sm.ServicesToBeCopied(o.SourceAppNames, o.CopyAsUpsServices)
+		sc, err = c.sm.ServicesToBeCopied(o.SourceAppNames, o.ServiceInstancesToCopyAsUPS, o.ServiceTypesToCopyAsUPS)
 		if err != nil {
 			c.logger.UI.Failed(err.Error())
 			return

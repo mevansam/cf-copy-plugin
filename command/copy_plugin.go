@@ -52,7 +52,8 @@ func (c *CopyPlugin) GetMetadata() plugin.PluginMetadata {
 						"-host-format, -n":       "Format of app route's hostname to make it unique i.e. \"{{.host}}-{{.space}}\".",
 						"-domain, -m":            "Domain to use to create routes for copied apps with same hostname.",
 						"-droplet, -c":           "Application droplet will be copied to the destination as is. Otherwise, the application bits will be re-pushed.",
-						"-ups, -s":               "Comma separated list of services that will be copied as user provided services in the target space.",
+						"-ups, -s":               "Comma separated list of service instances that will be copied as user provided services in the target space.",
+						"-service-types, -t":     "Comma separated list of service types that will be copied as user provided services in the target space.",
 						"-services-only, -o":     "Make copies of services only. If a list of applications are provided then only services bound to that app will be copied.",
 						"-recreate-services, -r": "Recreates services at destination.",
 						"-debug, -d":             "Output debug messages.",
@@ -112,6 +113,7 @@ func (c *CopyPlugin) parseCopyOptions(args []string) (*CopyOptions, bool) {
 	f.NewStringFlag("domain", "m", "")
 	f.NewBoolFlag("droplet", "c", "")
 	f.NewStringFlag("ups", "s", "")
+	f.NewStringFlag("service-types", "t", "")
 	f.NewBoolFlag("services-only", "o", "")
 	f.NewBoolFlag("recreate-services", "r", "")
 	f.NewBoolFlag("debug", "d", "")
@@ -134,7 +136,10 @@ func (c *CopyPlugin) parseCopyOptions(args []string) (*CopyOptions, bool) {
 		o.CopyAsDroplet = f.Bool("droplet")
 	}
 	if f.IsSet("ups") {
-		o.CopyAsUpsServices = strings.Split(f.String("ups"), ",")
+		o.ServiceInstancesToCopyAsUPS = strings.Split(f.String("ups"), ",")
+	}
+	if f.IsSet("service-types") {
+		o.ServiceTypesToCopyAsUPS = strings.Split(f.String("service-types"), ",")
 	}
 	if f.IsSet("recreate-services") {
 		o.RecreateServices = f.Bool("recreate-services")
