@@ -727,32 +727,32 @@
 		{
 			"checksumSHA1": "hP3bNsGSpLRxFIiY3J0EiB8f6nA=",
 			"path": "github.com/mevansam/cf-cli-api/cfapi",
-			"revision": "f5a897327a4011a82d92bc843ccf236fdbabd257",
-			"revisionTime": "2017-03-15T18:56:23Z"
+			"revision": "c6e05d1ce3afaf7446353c3e3aac448d9905cd0e",
+			"revisionTime": "2017-05-10T19:17:02Z"
 		},
 		{
 			"checksumSHA1": "ddSECvmOUpEBC+SuoeQU6qFsVZ8=",
 			"path": "github.com/mevansam/cf-cli-api/cfapi/mocks",
-			"revision": "f5a897327a4011a82d92bc843ccf236fdbabd257",
-			"revisionTime": "2017-03-15T18:56:23Z"
+			"revision": "c6e05d1ce3afaf7446353c3e3aac448d9905cd0e",
+			"revisionTime": "2017-05-10T19:17:02Z"
 		},
 		{
 			"checksumSHA1": "p7/6q83bCHBbROHmrz3B51JWegc=",
 			"path": "github.com/mevansam/cf-cli-api/copy",
-			"revision": "f5a897327a4011a82d92bc843ccf236fdbabd257",
-			"revisionTime": "2017-03-15T18:56:23Z"
+			"revision": "c6e05d1ce3afaf7446353c3e3aac448d9905cd0e",
+			"revisionTime": "2017-05-10T19:17:02Z"
 		},
 		{
 			"checksumSHA1": "KBXf1gYOrzjfnNiYPXM6aqILKTA=",
 			"path": "github.com/mevansam/cf-cli-api/copy/mocks",
-			"revision": "f5a897327a4011a82d92bc843ccf236fdbabd257",
-			"revisionTime": "2017-03-15T18:56:23Z"
+			"revision": "c6e05d1ce3afaf7446353c3e3aac448d9905cd0e",
+			"revisionTime": "2017-05-10T19:17:02Z"
 		},
 		{
 			"checksumSHA1": "zmjPn0Eisgfma05QFi0hameCnbY=",
 			"path": "github.com/mevansam/cf-cli-api/utils",
-			"revision": "f5a897327a4011a82d92bc843ccf236fdbabd257",
-			"revisionTime": "2017-03-15T18:56:23Z"
+			"revision": "c6e05d1ce3afaf7446353c3e3aac448d9905cd0e",
+			"revisionTime": "2017-05-10T19:17:02Z"
 		},
 		{
 			"checksumSHA1": "JLBw2uXliPcb4GuI8syufshneKM=",
