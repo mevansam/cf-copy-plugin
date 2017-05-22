@@ -602,6 +602,12 @@
 			"revisionTime": "2017-04-11T18:46:09Z"
 		},
 		{
+			"checksumSHA1": "A2AtnQ/WUCFzK0DmDMeVWhSqmls=",
+			"path": "github.com/cloudfoundry/noaa/test_helpers",
+			"revision": "511efbc6fe105a8d256ede3ee47c7a972e6b0082",
+			"revisionTime": "2016-11-07T19:00:21Z"
+		},
+		{
 			"checksumSHA1": "zrot2hMlFSF2aRvcjuXMjGpzhT4=",
 			"origin": "code.cloudfoundry.org/cli/vendor/github.com/cloudfoundry/sonde-go/events",
 			"path": "github.com/cloudfoundry/sonde-go/events",
@@ -630,11 +636,35 @@
 			"revisionTime": "2017-04-11T18:46:09Z"
 		},
 		{
+			"checksumSHA1": "uhKEYwEetJ2rYwWjr0xTmNvKq7E=",
+			"path": "github.com/gogo/protobuf/proto/proto3_proto",
+			"revision": "8d70fb3182befc465c4a1eac8ad4d38ff49778e2",
+			"revisionTime": "2016-11-05T09:51:13Z"
+		},
+		{
+			"checksumSHA1": "nF+sKUmZZCOKizYByLWMXa0lGSI=",
+			"path": "github.com/gogo/protobuf/proto/testdata",
+			"revision": "8d70fb3182befc465c4a1eac8ad4d38ff49778e2",
+			"revisionTime": "2016-11-05T09:51:13Z"
+		},
+		{
 			"checksumSHA1": "/4CSwqLFcBk4NuG0eMdlYeqXjV8=",
 			"origin": "code.cloudfoundry.org/cli/vendor/github.com/gogo/protobuf/protoc-gen-gogo/descriptor",
 			"path": "github.com/gogo/protobuf/protoc-gen-gogo/descriptor",
 			"revision": "755844f278fca86abf00f4ccda0f04b0301f5af9",
 			"revisionTime": "2017-04-11T18:46:09Z"
+		},
+		{
+			"checksumSHA1": "HPVQZu059/Rfw2bAWM538bVTcUc=",
+			"path": "github.com/gogo/protobuf/sortkeys",
+			"revision": "8d70fb3182befc465c4a1eac8ad4d38ff49778e2",
+			"revisionTime": "2016-11-05T09:51:13Z"
+		},
+		{
+			"checksumSHA1": "vddhE3O92g2vxO26mYJ/qEAJsZk=",
+			"path": "github.com/gogo/protobuf/types",
+			"revision": "8d70fb3182befc465c4a1eac8ad4d38ff49778e2",
+			"revisionTime": "2016-11-05T09:51:13Z"
 		},
 		{
 			"checksumSHA1": "OVfqk5qyKVLHFirVbQOfxSkFBPo=",
